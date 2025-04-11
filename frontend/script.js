@@ -197,11 +197,8 @@ async function checkAnomalies() {
 
 function updateStock() {
     console.log("Update Stock button clicked - navigating to update_stock.html");
-    window.location.href = 'update_stock.html'; // Navigate to the new page
+    window.location.href = 'update_stock.html'; // <--- THIS LINE
 }
-
-// --- Make sure the event listener is still attached ---
-if (updateStockBtn) updateStockBtn.addEventListener('click', updateStock);
 
 
 function createParetoChart(itemsData) { /* ... keep as is ... */ }

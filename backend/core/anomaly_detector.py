@@ -2,7 +2,7 @@ import pandas as pd
 import traceback
 from datetime import date, timedelta
 from . import metrics_calculator
-from data_access import loader
+from backend.data_access import loader
 from backend import config
 
 def detect_anomalies(merchant_id):

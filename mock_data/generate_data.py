@@ -790,19 +790,22 @@ def main():
         sys.path.insert(0, project_root)
 
 
-    # Merchant data
-    merchants_df = pd.read_csv(MERCHANT_FILENAME)
+    # # Merchant data
+    # merchants_df = pd.read_csv(MERCHANT_FILENAME)
+    #
+    #
+    # # Inventory data
+    # inventory_df = generate_inventory_history(merchant_ids= merchants_df.merchant_id,
+    #                                   unique_stocks_per_merchant= np.random.randint(3, 10, size = len(merchants_df.merchant_id)),
+    #                                   start_date= date(year = 2023, month = 1, day = 1), end_date= date(year = 2024, month = 1, day = 1))
+    #
+    # print(inventory_df)
+    # # print(inventory_df.loc[(inventory_df.merchant_id == "0c2d7") & (inventory_df.stock_name == "Beef")])
+    # inventory_df.to_csv(INVENTORY_FILENAME, index = False)
 
-   
-    # Inventory data
-    inventory_df = generate_inventory_history(merchant_ids= merchants_df.merchant_id, 
-                                      unique_stocks_per_merchant= np.random.randint(3, 10, size = len(merchants_df.merchant_id)),
-                                      start_date= date(year = 2023, month = 1, day = 1), end_date= date(year = 2024, month = 1, day = 1))
-    
-    print(inventory_df)
-    # print(inventory_df.loc[(inventory_df.merchant_id == "0c2d7") & (inventory_df.stock_name == "Beef")])
-    inventory_df.to_csv(INVENTORY_FILENAME, index = False)
 
+    inventory_df = pd.read_csv(r"C:\Users\Keisha Nalani\Documents\GitHub\mex-assistant-hackathon2\mock_data\inventory.csv")
+    print(pd.to_datetime(inventory_df.date_updated, format = "mixed"))
 
     # # PROCESS RAW DATA
     # # Merchant data

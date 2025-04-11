@@ -7,17 +7,20 @@ _merchant_df = None
 _items_df = None
 _transaction_data_df = None
 _inventory_df = None
-_transaction_items_df = None # <-- Add this
+_transaction_items_df = None  # <-- Add this
+
 
 def load_all_data():
     """Loads all data from CSV files into pandas DataFrames."""
-    global _merchant_df, _items_df, _transaction_data_df, _inventory_df,_transaction_items_df
+    global _merchant_df, _items_df, _transaction_data_df, _inventory_df, _transaction_items_df
 
     try:
         # Load Merchant Data
         _merchant_df = pd.read_csv(config.MERCHANT_CSV)
         if 'join_date' in _merchant_df.columns:
-            _merchant_df['join_date'] = pd.to_datetime(_merchant_df['join_date'], format=config.MERCHANT_JOIN_DATE_FORMAT, errors='coerce', utc= True)
+            _merchant_df['join_date'] = pd.to_datetime(_merchant_df['join_date'],
+                                                       format=config.MERCHANT_JOIN_DATE_FORMAT, errors='coerce',
+                                                       utc=True)
 
         # Load Items Data
         _items_df = pd.read_csv(config.ITEMS_CSV)
@@ -28,7 +31,7 @@ def load_all_data():
         _transaction_data_df = pd.read_csv(config.TRANSACTION_DATA_CSV)
         time_columns = [col for col in _transaction_data_df.columns if col.endswith("time")]
         for col in time_columns:
-            _transaction_data_df[col] = pd.to_datetime(_transaction_data_df[col], utc = True )
+            _transaction_data_df[col] = pd.to_datetime(_transaction_data_df[col], utc=True)
 
         if 'total_amount' in _transaction_data_df.columns:
             _transaction_data_df['total_amount'] = pd.to_numeric(_transaction_data_df['total_amount'], errors='coerce')
@@ -37,23 +40,21 @@ def load_all_data():
             print("WARNING: 'acceptance_status' column missing in transaction_data.csv. Assuming 'Accepted'.")
             _transaction_data_df['acceptance_status'] = 'Accepted'
 
-
         # Load Inventory Data
         _inventory_df = pd.read_csv(config.INVENTORY_CSV)
         if 'quantity' in _inventory_df.columns:
             _inventory_df['quantity'] = pd.to_numeric(_inventory_df['quantity'], errors='coerce')
         if 'date_updated' in _inventory_df.columns:
-            _inventory_df['date_updated'] = pd.to_datetime(_inventory_df['last_updated'], errors='coerce', utc=True)
-        
+            _inventory_df['date_updated'] = pd.to_datetime(_inventory_df['date_updated'], errors='coerce', utc=True)
+
         # Load Transaction Items Data
-        _transaction_items_df = pd.read_csv(config.TRANSACTION_ITEMS_CSV) # <-- Add this block
+        _transaction_items_df = pd.read_csv(config.TRANSACTION_ITEMS_CSV)  # <-- Add this block
         # Add any necessary type conversions if needed (e.g., quantity, item_price)
         if 'quantity' in _transaction_items_df.columns:
-            _transaction_items_df['quantity'] = pd.to_numeric(_transaction_items_df['quantity'], errors='coerce').fillna(0).astype(int)
+            _transaction_items_df['quantity'] = pd.to_numeric(_transaction_items_df['quantity'],
+                                                              errors='coerce').fillna(0).astype(int)
         if 'item_price' in _transaction_items_df.columns:
             _transaction_items_df['item_price'] = pd.to_numeric(_transaction_items_df['item_price'], errors='coerce')
-
-
 
         print("Data loaded successfully.")
 
@@ -64,6 +65,7 @@ def load_all_data():
         print(f"An unexpected error occurred during data loading: {e}")
         raise
 
+
 # --- Accessor Functions ---
 def get_merchant_df():
     """Returns a copy of the merchant DataFrame."""
@@ -71,11 +73,13 @@ def get_merchant_df():
         load_all_data()
     return _merchant_df.copy()
 
+
 def get_items_df():
     """Returns a copy of the items DataFrame."""
     if _items_df is None:
         load_all_data()
     return _items_df.copy()
+
 
 def get_transaction_data_df(merchant_id=None, start_date=None, end_date=None):
     """
@@ -101,25 +105,33 @@ def get_transaction_data_df(merchant_id=None, start_date=None, end_date=None):
         df = df[df['order_time'] < end_date]
     return df
 
+
 def get_inventory_df():
     """Returns a copy of the inventory DataFrame."""
-    if _inventory_df is None:
-        load_all_data()
+    _inventory_df = pd.read_csv(config.INVENTORY_CSV)
+    if 'quantity' in _inventory_df.columns:
+        _inventory_df['quantity'] = pd.to_numeric(_inventory_df['quantity'], errors='coerce')
+    if 'date_updated' in _inventory_df.columns:
+        _inventory_df['date_updated'] = pd.to_datetime(_inventory_df['date_updated'], errors='coerce', utc=True, format = "mixed")
     return _inventory_df.copy()
+
 
 # --- Helper Functions for Specific Data Retrieval ---
 def get_merchants_df():
     """Alias for get_merchant_df for consistency with previous code."""
     return get_merchant_df()
 
+
 def get_products_df():
     """Alias for get_items_df for consistency with previous code."""
     return get_items_df()
+
 
 def get_products_df_by_merchant(merchant_id):
     """Returns a DataFrame of products specific to a given merchant."""
     items_df = get_items_df()
     return items_df[items_df['merchant_id'] == merchant_id].copy()
+
 
 def update_inventory(updates):
     """
@@ -144,6 +156,7 @@ def update_inventory(updates):
         print(f"Error updating inventory: {e}")
         return False
 
+
 if __name__ == "__main__":
     # Example usage if you want to test the loader directly
     try:
@@ -166,6 +179,7 @@ if __name__ == "__main__":
         print("\nPlease ensure your CSV files are in the correct location.")
     except Exception as e:
         print(f"\nAn error occurred during the example usage: {e}")
+
 
 def get_order_items_df():
     """Returns a copy of the transaction items DataFrame."""
