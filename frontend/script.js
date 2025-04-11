@@ -46,7 +46,32 @@ function displayMessage(message, sender, elementId = null) { // Added optional e
         chatMessages.appendChild(messageElement);
     }
 
-    messageElement.textContent = message; // Update/set text content
+        // --- MODIFICATION START ---
+    // Check if marked and DOMPurify are available (basic check)
+    if (typeof marked === 'object' && typeof DOMPurify === 'function') {
+        try {
+            // 1. Parse the Markdown string into raw HTML
+            // You can configure Marked options here if needed: marked.parse(message, options)
+            const rawHtml = marked.parse(message);
+
+            // 2. Sanitize the generated HTML to prevent XSS attacks
+            // Configure DOMPurify options if needed: DOMPurify.sanitize(rawHtml, config)
+            const sanitizedHtml = DOMPurify.sanitize(rawHtml);
+
+            // 3. Set the sanitized HTML as the element's content
+            messageElement.innerHTML = sanitizedHtml;
+
+        } catch (error) {
+            // Log error and fallback to plain text if parsing/sanitizing fails
+            console.error("Error processing Markdown:", error);
+            messageElement.textContent = message; // Fallback
+        }
+    } else {
+        // Fallback to textContent if libraries aren't loaded
+        console.warn("Marked.js or DOMPurify not loaded. Displaying message as plain text.");
+        messageElement.textContent = message;
+    }
+    // --- MODIFICATION END ---
 
     // Auto-scroll to the latest message
     chatMessages.scrollTop = chatMessages.scrollHeight;
