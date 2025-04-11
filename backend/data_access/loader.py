@@ -43,7 +43,7 @@ def load_all_data():
         if 'quantity' in _inventory_df.columns:
             _inventory_df['quantity'] = pd.to_numeric(_inventory_df['quantity'], errors='coerce')
         if 'date_updated' in _inventory_df.columns:
-            _inventory_df['date_updated'] = pd.to_datetime(_inventory_df['last_updated'], errors='coerce', utc=True)
+            _inventory_df['date_updated'] = pd.to_datetime(_inventory_df['date_updated'], errors='coerce', utc=True)
         
         # Load Transaction Items Data
         _transaction_items_df = pd.read_csv(config.TRANSACTION_ITEMS_CSV) # <-- Add this block
