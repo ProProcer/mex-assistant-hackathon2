@@ -1,1 +1,0 @@
-# mex-assistant-hackathon2

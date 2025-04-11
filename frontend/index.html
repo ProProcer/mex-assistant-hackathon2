@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEX Assistant</title>
+
+    <!-- Link the CSS file -->
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Preconnect for potential font loading performance -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   
+</head>
+<body>
+
+    <!-- Grab-style Header -->
+    <header class="app-header">
+        <a href="https://food.grab.com/my/en/?gad_source=1&gbraid=0AAAAADoBF3t-EbPaiTPjk8s2f2xi-5cW7&gclid=CjwKCAjw--K_BhB5EiwAuwYoyhlWTAsgxXxdV7nN4KcKGmirmGiVpJDi7UxwDk5d_Ex26G57vvY3vBoCa1sQAvD_BwE&gclsrc=aw.ds"><img src="images/GrabFood Logo White.png"></a>
+        <h1>MEX Assistant</h1>
+        
+    </header>
+
+    <main class="app-content">
+        <section id="merchant-info" class="info-card">
+            Loading merchant info...
+        </section>
+
+        <section id="controls" class="controls-grid">
+            <button id="get-report-btn" class="control-button">
+                <span class="button-icon">📊</span> Get Report
+            </button>
+            <button id="check-anomalies-btn" class="control-button">
+                <span class="button-icon">⚠️</span> Check Issues
+            </button>
+            <button id="update-stock-btn" class="control-button">
+                <span class="button-icon">📦</span> Update Stock
+            </button>
+        </section>
+
+        <section id="chat-container" class="chat-card">
+            <h2>Assistant Chat 💬</h2>
+            <div id="chat-messages">
+                <!-- Messages will be added here by script.js -->
+            </div>
+
+            <!-- Report Display Area -->
+            <div id="report-display" class="report-area">
+                <button id="close-report-btn" title="Close Report">×</button>
+                <h3>Daily Report Area</h3>
+                <canvas id="pareto-chart" width="400" height="200"></canvas>
+                <!-- Other report elements can go here -->
+            </div>
+            <!-- END: Report Display Area -->
+
+
+            <!-- Chat Input Area -->
+            <div id="chat-input-area">
+                <input type="text" id="user-input" placeholder="Type your message...">
+                <button id="send-btn" aria-label="Send Message">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="24" height="24">
+                      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                    </svg>
+                </button>
+            </div>
+            <!-- END: Chat Input Area -->
+
+        </section>
+    </main>
+
+    <!-- Include Chart.js library -->
+    <script src="lib/chart.umd.js"></script>
+    <!-- Include your script -->
+    <script src="script.js"></script>
+</body>
+</html>
