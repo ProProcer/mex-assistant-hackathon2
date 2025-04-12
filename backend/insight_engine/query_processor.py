@@ -6,10 +6,9 @@ import pandas as pd
 import numpy as np
 import contextlib
 import traceback
-from datetime import date, timedelta, datetime, timezone # Keep these
+from datetime import date, timedelta, datetime, timezone 
 import os
 import sys
-# REMOVE codecs import - we won't use it
 from backend.reporting.daily_report_generator import generate_daily_report
 from backend.core.anomaly_detector import detect_anomalies
 from . import gemini_service
@@ -18,16 +17,13 @@ from backend.core import metrics_calculator
 
 MAX_TURNS = 10
 
-# --- Helper to create the get_user_id function ---
-# This closure ensures the function created inside run_code knows the correct ID
+
 def _create_get_user_id_func(user_id):
     def get_user_id():
         """Returns the merchant_id for the current context."""
         return user_id
     return get_user_id
 
-# --- Define the Fixed Report Template ---
-# --- Define the Fixed Report Template ---
 
 
 DAILY_REPORT_TEMPLATE = """
@@ -95,7 +91,6 @@ def process_merchant_question(merchant_id, question):
     print(f"Processing question for Merchant ID {merchant_id}: '{question}'")
     question_lower = question.lower().strip() # Convert to lower and strip whitespace
 
-    # --- <<< START TEMPLATE INJECTION >>> ---
     # Keywords to detect report requests
     report_keywords = [
         'daily report', 'get report', 'latest report', 'sales summary',
@@ -107,7 +102,6 @@ def process_merchant_question(merchant_id, question):
         print("Detected report request. Returning fixed template.")
         # Return the predefined template directly
         return json.dumps({"answer": DAILY_REPORT_TEMPLATE})
-    # --- <<< END TEMPLATE INJECTION >>> ---
 
 
     # --- Existing logic continues below ONLY if it's NOT a report request ---
@@ -193,11 +187,11 @@ def process_merchant_question(merchant_id, question):
         # --- Parse LLM Response ---
         call_function_match = re.search(r"CALL_FUNCTION:(.*?)(?:ANSWER:|$)", raw_response, re.DOTALL | re.IGNORECASE)
         
-        # --- **REVISED Parsing Logic** ---
+        # --- Parsing Logic ---
         answer_match = re.search(r"ANSWER:(.*?)($|CALL_FUNCTION:|Thinking:)", raw_response, re.DOTALL | re.IGNORECASE)
         call_function_match = re.search(r"CALL_FUNCTION:(.*?)(?:ANSWER:|$|Thinking:)", raw_response, re.DOTALL | re.IGNORECASE)
 
-        # Extract thinking part (before ANSWER or CALL_FUNCTION)
+        # Extract thinking part
         thinking_end_pos = len(raw_response)
         if answer_match: thinking_end_pos = min(thinking_end_pos, answer_match.start())
         if call_function_match: thinking_end_pos = min(thinking_end_pos, call_function_match.start())
@@ -209,10 +203,10 @@ def process_merchant_question(merchant_id, question):
 
         final_answer_text = answer_match.group(1).strip() if answer_match else None
         call_function_str = call_function_match.group(1).strip() if call_function_match else None
-        # --- End Revised Parsing Logic ---
 
 
-        # --- **REVISED Processing Logic** ---
+
+        # --- Processing Logic ---
         if final_answer_text is not None and call_function_str is not None:
             # Case: Both ANSWER and CALL_FUNCTION provided (Expected for final chart step)
             print(f"--> Found ANSWER and CALL_FUNCTION.")
@@ -292,18 +286,16 @@ def process_merchant_question(merchant_id, question):
             conversation_history.append({"role": "system", "status": "Ambiguous response"})
             # Return the thinking or a generic message as JSON
             return json.dumps({"answer": f"Thinking: {current_thinking}\n(Couldn't determine next step...)"})
-        # --- END REVISED Processing Logic ---
 
     # Max turns reached
     print("Maximum turns reached.")
     conversation_history.append({"role": "system", "status": "Max turns reached"})
     return json.dumps({"answer": f"Sorry, I got stuck processing that. Last thought: {current_thinking}"})
 
+
 # --- Prompt Building Helpers ---
 
-# Updated to accept pre-fetched components and use f-strings correctly
 def build_initial_prompt(briefing, core_principles, merchant_context, current_date, data_schemas, tool_descriptions, user_question, report_exception_instruction,chart_instruction):
-    # Added a dedicated section for run_code rules
     return f"""
 {briefing}
 **Core Principles:**
@@ -332,9 +324,8 @@ def build_initial_prompt(briefing, core_principles, merchant_context, current_da
 Thinking:
 """
 
-# Updated to accept the report_exception_instruction
+
 def build_intermediate_prompt(briefing, core_principles, merchant_context, current_date, data_schemas, tool_descriptions, original_question, previous_thinking, provided_data,chart_instruction):
-    # Added stricter rules for run_code and error handling
     return f"""
 {briefing}
 
@@ -375,27 +366,25 @@ merchants make better business decisions and streamline operations. Remember to 
 """
 
 def get_merchant_context_prompt(merchant_id):
-    # Slightly improved error handling and clarity
-    # Assume loader is accessible
     cities = np.array(["Singapore", "Kuala Lumpur", "Jakarta", 
                         "Manila", "Naypyidaw", "Vientiane", "Phnom Penh", "Bandar Seri Begawan"])
 
     try:
-        merchant_df = loader.get_merchants_df() # Use actual loader function name
-        items_df = loader.get_products_df() # Use actual loader function name
+        merchant_df = loader.get_merchants_df()
+        items_df = loader.get_products_df() 
 
-        merchant_info = merchant_df[merchant_df['merchant_id'] == merchant_id] # Use correct column name
+        merchant_info = merchant_df[merchant_df['merchant_id'] == merchant_id]
         if merchant_info.empty:
             print(f"Warning: Merchant ID {merchant_id} not found in merchants data.")
             return f"Merchant ID: {merchant_id}. (Details not found)."
 
-        merchant_info = merchant_info.iloc[0] # Get the first row as a Series
+        merchant_info = merchant_info.iloc[0] 
 
         # --- City Name Logic ---
         city_id = merchant_info.get('city_id')
-        city_name = merchant_info.get('city_name') # Check if it already exists
+        city_name = merchant_info.get('city_name')
 
-        if pd.isna(city_name) or city_name == "Unknown City": # If missing or default unknown
+        if pd.isna(city_name) or city_name == "Unknown City":
              if pd.notna(city_id):
                  try:
                      city_id_int = int(city_id)
@@ -406,15 +395,15 @@ def get_merchant_context_prompt(merchant_id):
                  city_name = "Unknown City"
         # --- End City Name Logic ---
 
-        items = items_df[items_df['merchant_id'] == merchant_id] # Use correct column name
+        items = items_df[items_df['merchant_id'] == merchant_id]
         menu_items = []
         if not items.empty:
             max_items_in_prompt = 5 # Reduced for brevity
             # Use correct item/product column names from items.csv/products.csv
             for _, item in items.head(max_items_in_prompt).iterrows():
-                 item_name = item.get('product_name', item.get('item_name', 'N/A')) # Check both common names
-                 item_id = item.get('product_id', item.get('item_id', 'N/A')) # Check both common names
-                 price = item.get('price', item.get('item_price', 'N/A')) # Check both common names
+                 item_name = item.get('product_name', item.get('item_name', 'N/A')) 
+                 item_id = item.get('product_id', item.get('item_id', 'N/A')) 
+                 price = item.get('price', item.get('item_price', 'N/A')) 
                  item_desc = f"{item_name} (ID: {item_id}, Price: {price})"
                  menu_items.append(item_desc)
             if len(items) > max_items_in_prompt:
@@ -473,12 +462,8 @@ def get_available_data_schemas_prompt(loader_module=loader, max_examples=2):
         try:
             func_object = getattr(loader_module, func_name)
 
-            # --- Attempt to call the function to get the DataFrame ---
-            # Add basic argument handling if some functions require them (e.g., merchant_id)
-            # This part is tricky without knowing exact signatures. We'll assume no args for schema gen.
-            # If functions *require* args, this schema generation will fail for them.
             try:
-                 df = func_object() # Assume it can be called without args for schema
+                 df = func_object()
             except TypeError as te:
                  # Basic check if it failed due to missing arguments
                  if "required positional argument" in str(te) or "missing" in str(te).lower():
@@ -647,7 +632,7 @@ def execute_tool_call(merchant_id, call_function_str):
     call_function_str = call_function_str.strip()
     print(f"Attempting to parse and execute (full string start/end): {call_function_str[:100]}...{call_function_str[-100:]}")
 
-    # 1. Extract Function Name (same as before)
+    # 1. Extract Function Name
     name_match = re.match(r"^\s*([a-zA-Z_][a-zA-Z0-9_]*)", call_function_str)
     if not name_match:
         error_msg = f"Could not extract function name from: '{call_function_str[:100]}...'"
@@ -656,7 +641,7 @@ def execute_tool_call(merchant_id, call_function_str):
     func_name = name_match.group(1)
     print(f"Parsed Function Name: {func_name}")
 
-    # 2. Find Parameter Block (same as before)
+    # 2. Find Parameter Block
     open_paren_index = call_function_str.find('(', len(func_name))
     close_paren_index = call_function_str.rfind(')')
     if open_paren_index == -1 or close_paren_index == -1 or close_paren_index < open_paren_index:
@@ -669,8 +654,6 @@ def execute_tool_call(merchant_id, call_function_str):
     # 3. Execute based on function name
     try:
         if func_name == "run_code":
-            # --- *** Robust code_string Extraction *** ---
-            # This regex handles single, double, or triple quotes and captures the content using DOTALL
             code_match = re.search(
                 r"""code_string\s*=\s*(?P<quote>['"]|"{3}|'{3})(.*?)(?P=quote)\s*$""",
                 params_str,
@@ -683,9 +666,6 @@ def execute_tool_call(merchant_id, call_function_str):
 
             code_to_run_raw = code_match.group(2)
 
-            # **Crucial:** Decode common string escapes that exec expects
-            # This step converts literal "\\n" etc. within the extracted string
-            # into actual newline characters etc. for Python execution.
             try:
                  # Use the 'unicode_escape' codec carefully now that we have the *correct* string content
                  code_to_run = code_to_run_raw.encode('latin-1', 'backslashreplace').decode('unicode_escape')
@@ -703,12 +683,11 @@ def execute_tool_call(merchant_id, call_function_str):
                 print(f"Error: {err_msg}")
                 return f"--- Execution Failed ---\n--- Error Type ---\nParameterError\n--- Error Message ---\n{err_msg}"
 
-            # Execute (call revised run_code)
+            # Execute
             get_user_id_func = _create_get_user_id_func(merchant_id)
             print(f"Executing run_code for merchant_id {merchant_id}")
             result = run_code(code_string=code_to_run, user_context_globals={'get_user_id': get_user_id_func})
             return result
-        # --- End run_code ---
 
         elif func_name == "get_daily_report":
             print(f"Executing get_daily_report for merchant {merchant_id}")
@@ -722,11 +701,9 @@ def execute_tool_call(merchant_id, call_function_str):
 
             if report_date_str:
                 try:
-                    # Parse the string directly into a datetime object
                     parsed_dt = datetime.strptime(report_date_str, '%Y-%m-%d')
-                    # Make it timezone-aware UTC (start of the day)
                     report_dt_to_pass = parsed_dt.replace(tzinfo=timezone.utc)
-                    # Optional: Check if date is in the future, though generate_daily_report might handle this better
+
                     if report_dt_to_pass.date() > date.today():
                          print(f"Warning: Report date '{report_date_str}' is in the future. Using today's start UTC.")
                          report_dt_to_pass = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
@@ -736,8 +713,6 @@ def execute_tool_call(merchant_id, call_function_str):
                     # Fallback to start of today UTC if format is wrong
                     report_dt_to_pass = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
             else:
-                # Default: Use the beginning of today UTC if no date specified
-                # generate_daily_report will find the *actual* latest based on this starting point
                 report_dt_to_pass = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
                 print(f"No report date specified. Using default: {report_dt_to_pass.strftime('%Y-%m-%d %H:%M:%S %Z')}")
 
@@ -748,14 +723,12 @@ def execute_tool_call(merchant_id, call_function_str):
             return json.dumps(report_data, indent=2, default=str)
 
         elif func_name == "check_for_anomalies":
-             # --- Logic remains the same ---
              print(f"Executing check_for_anomalies for merchant {merchant_id}")
              detected_anomalies_list = detect_anomalies(merchant_id)
              print(f"Detected anomalies: {detected_anomalies_list}")
              return json.dumps(detected_anomalies_list, indent=2, default=str)
 
         elif func_name == "display_chart":
-             # --- Logic remains the same (uses re.search on params_str) ---
             print(f"Executing display_chart command for merchant {merchant_id}")
             chart_type = None
             chart_data_str = None
@@ -779,19 +752,17 @@ def execute_tool_call(merchant_id, call_function_str):
             if start_match:
                 quote_char = start_match.group(1)
                 start_index = start_match.end()
-                # Find the *corresponding* closing quote carefully
                 end_index = -1
                 current_pos = start_index
                 while current_pos < len(params_str):
                     find_quote = params_str.find(quote_char, current_pos)
                     if find_quote == -1: # Not found
                         break
-                    if params_str[find_quote - 1] == '\\': # Escaped quote, skip
+                    if params_str[find_quote - 1] == '\\': 
                         current_pos = find_quote + 1
                     else: # Found the non-escaped closing quote
                         end_index = find_quote
                         break
-                # If still not found, maybe it's the end of the params string
                 if end_index == -1:
                      if params_str.endswith(quote_char):
                          end_index = len(params_str) - 1
@@ -814,7 +785,7 @@ def execute_tool_call(merchant_id, call_function_str):
 
             supported_chart = ["line", "bar"]
 
-            # Validation (same as before)
+            # Validation
             if not chart_type or chart_data_str is None:
                 err_msg = f"display_chart: Missing required 'chart_type' or could not extract 'chart_data'. Params: '{params_str[:100]}...{params_str[-100:]}'"
                 return f"--- Execution Failed ---\n--- Error Type ---\nParameterError\n--- Error Message ---\n{err_msg}"
@@ -822,7 +793,7 @@ def execute_tool_call(merchant_id, call_function_str):
                  err_msg = f"display_chart: Unsupported chart_type '{chart_type}'. Only 'bar' is supported."
                  return f"--- Execution Failed ---\n--- Error Type ---\nParameterError\n--- Error Message ---\n{err_msg}"
 
-            # JSON Parsing and Payload creation (same as before)
+            # JSON Parsing and Payload creation
             try:
                 print(f"[DEBUG display_chart] Attempting to parse chart_data_str: {chart_data_str[:100]}...{chart_data_str[-100:]}")
                 chart_data_obj = json.loads(chart_data_str) # Parse the unescaped JSON string
@@ -916,7 +887,7 @@ def run_code(code_string: str, user_context_globals: dict = None) -> str:
         result_parts.append(f"--- stderr ---\n{stderr.strip() if stderr.strip() else '[No stderr]'}")
 
     except Exception as e:
-        # --- Error Capturing (same as before) ---
+        # --- Error Capturing ---
         stdout = output_capture.getvalue()
         stderr = error_capture.getvalue()
         tb_string = traceback.format_exc()
@@ -931,80 +902,3 @@ def run_code(code_string: str, user_context_globals: dict = None) -> str:
     return "\n".join(result_parts).strip()
 
 
-# --- Example Usage (if run directly) ---
-if __name__ == '__main__':
-    print("Testing Query Processor Setup...")
-
-    # Mock necessary components if they aren't globally available/importable standalone
-    # This requires your actual loader, gemini_service etc. to be set up
-    # or replaced with mocks for standalone testing.
-
-    # Example Mock Gemini Service:
-    class MockGemini:
-         def generate_text(self, prompt):
-              print("--- MOCK LLM RECEIVED PROMPT ---")
-              print(prompt[:200] + "..." + prompt[-200:])
-              print("--- MOCK LLM SENDING RESPONSE ---")
-              # Simulate LLM response based on prompt content
-              if "how were my sales yesterday" in prompt.lower():
-                   return """Thinking:
-1. The merchant wants sales data for yesterday.
-2. I need to get the total sales amount and order count.
-3. The `run_code` tool seems appropriate for this calculation using the loader.
-4. I need to load transaction data, filter by merchant ID and yesterday's date, then calculate sum of 'total_amount' and count transactions.
-CALL_FUNCTION: run_code(code_string='import pandas as pd\nfrom datetime import date, timedelta\nmerchant_id = get_user_id()\nyesterday = date.today() - timedelta(days=1)\nstart_dt = pd.Timestamp(yesterday)\nend_dt = start_dt + timedelta(days=1)\norders_df = loader.get_transaction_data_df() # Assuming this function exists\nmerchant_orders = orders_df[(orders_df["merchant_id"] == merchant_id) & (orders_df["order_time"] >= start_dt) & (orders_df["order_time"] < end_dt)]\ntotal_sales = merchant_orders["total_amount"].sum()\norder_count = len(merchant_orders)\nprint(f"Date: {yesterday.strftime(\'%Y-%m-%d\')}\\nTotal Sales: {total_sales}\\nOrder Count: {order_count}")')"""
-              elif "print(f" in prompt: # Simulate response after code execution
-                   return """Thinking:
-1. The system executed the code I requested.
-2. The code calculated yesterday's sales and order count.
-3. The output contains the required information.
-4. I can now format this into a clear answer for the merchant.
-ANSWER: Yesterday ({provided_data_date}), you had {provided_data_count} orders totaling ${provided_data_sales:.2f}. Keep up the good work! Maybe consider promoting a popular item today?
-""" # Note: The ANSWER would ideally use placeholders replaced by data from provided_data
-              else:
-                   return """Thinking:
-1. I need to understand the user's request: 'Hello there'
-2. This is a simple greeting and requires no data.
-ANSWER: Hello! How can I help you with your GrabFood business today?
-"""
-
-    gemini_service = MockGemini() # Use the mock
-
-    # Mock Loader (replace with your actual loader)
-    class MockLoader:
-        def get_merchants_df(self):
-             return pd.DataFrame({
-                 'merchant_id': ['MOCK-123', 'MOCK-456'],
-                 'city_id': [1, 3],
-                 'name': ['Mock Cafe', 'Mock Bistro']
-             })
-        def get_products_df(self):
-             return pd.DataFrame({
-                 'item_id': ['P1', 'P2', 'P3'],
-                 'merchant_id': ['MOCK-123', 'MOCK-123', 'MOCK-456'],
-                 'item_name': ['Mock Coffee', 'Mock Pastry', 'Mock Burger'],
-                 'price': [3.50, 2.80, 8.99]
-             })
-        def get_inventory_df(self): # Need this schema
-             return pd.DataFrame({'product_id': ['P1', 'P2', 'P3'], 'current_stock': [50, 25, 100]})
-        def get_transaction_data_df(self): # Need this schema for the example flow
-             today = pd.Timestamp.now().normalize()
-             yesterday = today - timedelta(days=1)
-             return pd.DataFrame({
-                'transaction_id': ['T1', 'T2', 'T3', 'T4'],
-                'merchant_id': ['MOCK-123', 'MOCK-123', 'MOCK-456', 'MOCK-123'],
-                'order_time': [yesterday + timedelta(hours=h) for h in [9, 12, 10, 18]],
-                'total_amount': [6.30, 3.50, 8.99, 2.80],
-                'prep_time_minutes': [5, 4, 10, 6]
-            })
-    loader = MockLoader() # Use the mock
-
-    # --- Run Test ---
-    test_merchant_id = "MOCK-123"
-    test_question = "How were my sales yesterday?"
-    # test_question = "Hello there"
-
-    final_response = process_merchant_question(test_merchant_id, test_question)
-    print("\n====== FINAL RESPONSE ======")
-    print(final_response)
-    print("==========================")

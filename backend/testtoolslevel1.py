@@ -4,12 +4,11 @@ from datetime import date, timedelta
 import json # To pretty-print the results
 import pandas as pd # For checking data types maybe
 
-# --- !!! FIX: Add Project Root to Python Path !!! ---
 # Calculate the path to the project root directory (one level up from 'backend')
 project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # Insert it at the beginning of the Python path list
 sys.path.insert(0, project_root)
-# --- End Fix ---
+
 
 # --- Core Imports (Now should work) ---
 # It's often clearer to use the full path from the project root now
