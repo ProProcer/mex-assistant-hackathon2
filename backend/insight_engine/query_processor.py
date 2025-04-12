@@ -26,14 +26,92 @@ def _create_get_user_id_func(user_id):
         return user_id
     return get_user_id
 
+# --- Define the Fixed Report Template ---
+# --- Define the Fixed Report Template ---
+
+
+DAILY_REPORT_TEMPLATE = """
+Okay, here's the planned structure for the Daily Report (Implementation In Progress):
+
+# Daily Report Template
+
+**Report Date:** `[Date for which report applies]`
+
+---
+
+## 1. Basic Info
+
+* **Merchant Name:** `[Your Merchant Name]`
+* **Type:** `[e.g., Restaurant, Hawker]`
+* **Location:** `[e.g., Central]`
+* **Business Maturity:** `[e.g., 1.5 years]`
+* **Scale Tier:** `[e.g., Silver Tier]`
+    * *Note: Research needed for exact scale definition*
+
+
+---
+
+## 2. Performance Metrics
+
+* **a. Sales Overview:** `[Summary of sales trends - e.g., Sales: $XXX.XX (N orders)]`
+    * *[Chart: Sales over time]*
+* **b. Item Sales:** `[Summary of items sold]`
+    * *[Chart: Items sold over time]*
+* **c. Top Products:** `[List of top items]`
+    * *[Chart: Pareto analysis]*
+
+
+---
+
+## 3. Inventory Insights
+
+* **Stock Run-out Forecast (1-3 Days):**
+    * `[Item 1]: Est. [X] days left`
+    * `[Item 2]: Est. [Y] days left`
+    * *Based on recent sales velocity*
+
+
+---
+
+## 4. Word of Encouragement
+
+* `[Motivational message based on performance]`
+
+
+---
+
+**Status:** Please note, the actual data calculation and population for this report are **still under development**. This is a template of the intended output structure based on project requirements.
+"""
+
+
 # --- Core Processing Logic ---
 
 def process_merchant_question(merchant_id, question):
     """
     Processes a question using a multi-turn prompt strategy with Gemini,
     allowing the LLM to use tools including 'run_code'.
+    Intercepts requests for the daily report to return a fixed template.
     """
     print(f"Processing question for Merchant ID {merchant_id}: '{question}'")
+    question_lower = question.lower().strip() # Convert to lower and strip whitespace
+
+    # --- <<< START TEMPLATE INJECTION >>> ---
+    # Keywords to detect report requests
+    report_keywords = [
+        'daily report', 'get report', 'latest report', 'sales summary',
+        'performance update', 'yesterday report', 'how was sales',
+        'how were sales', 'how did i do', 'report today', 'view report'
+    ]
+    # Check if any keyword is present in the user's question
+    if any(keyword in question_lower for keyword in report_keywords):
+        print("Detected report request. Returning fixed template.")
+        # Return the predefined template directly
+        return json.dumps({"answer": DAILY_REPORT_TEMPLATE})
+    # --- <<< END TEMPLATE INJECTION >>> ---
+
+
+    # --- Existing logic continues below ONLY if it's NOT a report request ---
+    print("Not a direct report request, proceeding with AI processing...")
 
       # --- Ensure merchant_id is a string ---
     if not isinstance(merchant_id, str):
@@ -53,13 +131,14 @@ def process_merchant_question(merchant_id, question):
     data_schemas = get_available_data_schemas_prompt()
     tool_descriptions = get_available_tools_prompt()
 
-    # --- Tool Bypass Instruction (for prompts) ---
+    # --- Tool Bypass Instruction (for prompts) --
     report_exception_instruction = (
         "**Special Case:** If you call `get_daily_report`, the system will "
         "return its raw output directly. Do *not* try to summarize or analyze "
         "the report data yourself in a subsequent 'ANSWER:' step; the raw data "
         "is the final output for that specific tool call."
     )
+    
     chart_instruction = (
         "**Generating Charts:** To show a chart: 1. Use `run_code` to calculate data & print JSON. 2. Wait for result. "
         "3. In the *final* step, provide *both* your textual `ANSWER:` explaining the chart, *and* then immediately follow with `CALL_FUNCTION: display_chart(...)` using the JSON data from step 1."
@@ -95,7 +174,6 @@ def process_merchant_question(merchant_id, question):
                 original_question=question,
                 previous_thinking=current_thinking,
                 provided_data=provided_data,
-                report_exception_instruction=report_exception_instruction,
                 chart_instruction = chart_instruction
             )
 
@@ -190,11 +268,12 @@ def process_merchant_question(merchant_id, question):
             tool_result_string = execute_tool_call(merchant_id, call_function_str)
             print(f"<-- Tool Execution Result (String): {tool_result_string[:500]}...")
 
-            if func_name == "get_daily_report": # Handle daily report bypass
-                 print(f"--> Special Handling: '{func_name}'. Returning result directly.")
-                 conversation_history.append({"role": "system", "tool_call": call_function_str, "tool_response": tool_result_string})
-                 return json.dumps({"answer": tool_result_string}) # Return raw report string as answer
-            elif "Execution Failed" in tool_result_string:
+            # if func_name == "get_daily_report": # Handle daily report bypass
+            #    print(f"--> Special Handling: '{func_name}'. Returning result directly.")
+            #     conversation_history.append({"role": "system", "tool_call": call_function_str, "tool_response": tool_result_string})
+            #     return json.dumps({"answer": tool_result_string}) # Return raw report string as answer
+            
+            if "Execution Failed" in tool_result_string:
                  # If tool failed, pass the error back to the AI to potentially fix
                  print("--> Tool execution failed. Passing error back to AI.")
                  provided_data = tool_result_string
@@ -240,11 +319,12 @@ def build_initial_prompt(briefing, core_principles, merchant_context, current_da
 **Instructions:**
 1. Analyze question: "{user_question}".
 2. Think step-by-step under `Thinking:`.
-3. Determine the **first** tool call needed (usually `run_code` for data). Output `CALL_FUNCTION: ...`.
-4. Follow **`run_code` Rules:** NO IMPORTS, NO PLOTTING, calculate data, print result (use JSON for chart data).
-5. **{report_exception_instruction}**
-6. **{chart_instruction}** # Add chart instruction
-7. Format: `Thinking: ...` then `CALL_FUNCTION: ...` (or `ANSWER:` if no tool needed).
+3. Determine the **first** tool call needed (e.g., `run_code`, `get_daily_report`). Output `CALL_FUNCTION: ...`.
+4. Follow **`run_code` Rules:** NO IMPORTS, NO PLOTTING, calculate data, print result (use JSON for chart data). **Timezone Handling:** Ensure comparisons use timezone-aware UTC datetimes.
+5. **{chart_instruction}**
+6. **Handling `get_daily_report` Results (If Tool is Called):** If you call `get_daily_report` and receive JSON data back, your **only** task in that *subsequent* turn is to format the received JSON data into a user-friendly summary using **Markdown** in the `ANSWER:` section. **Trust the Date:** Use the `"effective_report_date"` from the JSON. **Present Data/Error Only:** Format the data strictly; DO NOT analyze. If JSON has an `"error"`, present it.
+7. Format: `Thinking: ...` then `CALL_FUNCTION: ...` (or `ANSWER:` if no tool needed, or for formatting the report as per instruction #6).
+
 **Merchant's Question:**
 {user_question}
 
@@ -253,7 +333,7 @@ Thinking:
 """
 
 # Updated to accept the report_exception_instruction
-def build_intermediate_prompt(briefing, core_principles, merchant_context, current_date, data_schemas, tool_descriptions, original_question, previous_thinking, provided_data, report_exception_instruction,chart_instruction):
+def build_intermediate_prompt(briefing, core_principles, merchant_context, current_date, data_schemas, tool_descriptions, original_question, previous_thinking, provided_data,chart_instruction):
     # Added stricter rules for run_code and error handling
     return f"""
 {briefing}
@@ -270,28 +350,28 @@ Continue answering: "{original_question}"
 *   **Data/Result Provided:** {provided_data[:1000]}...
 
 **Instructions:**
-1. Review `Provided Data`. Is the next step possible?
-2. Reason under `Thinking:`.
+1. Review `Provided Data`.
+2. Reason under `Thinking:`. What is the next logical step based *only* on the `Provided Data` and the `Original Question`?
 3. Determine **next** step:
-    *   Need more data/calculation? -> `CALL_FUNCTION: run_code(...)`. Follow `run_code` rules (NO IMPORTS/PLOTTING, print JSON for charts).
-    *   Ready to display chart? -> Provide textual `ANSWER: ...` AND THEN `CALL_FUNCTION: display_chart(...)` using JSON data from previous `run_code`.
+    *   **Is `Provided Data` the JSON from `get_daily_report`?** -> Format this JSON data using **Markdown** in the `ANSWER:` section. **Trust the Date:** Use `"effective_report_date"`. **Present Data/Error Only:** Format strictly; DO NOT analyze. If JSON has an `"error"`, present it.
+    *   Need more data/calculation? -> `CALL_FUNCTION: run_code(...)`. Follow `run_code` rules (timezone awareness, print JSON for charts).
+    *   Ready to display chart? -> Provide textual `ANSWER: ...` AND THEN `CALL_FUNCTION: display_chart(...)`.
     *   Ready for final text answer? -> `ANSWER: ...`.
     *   Handle errors from `Provided Data`: Explain correction in `Thinking:`, call corrected `run_code`. Give up after 1-2 tries.
-4. **{report_exception_instruction}**
-5. **{chart_instruction}** # Add chart instruction
-6. Format: `Thinking: ...` then *either* `CALL_FUNCTION: ...` *or* `ANSWER: ...` *or* (`ANSWER: ...` followed by `CALL_FUNCTION: display_chart(...)`).
+4. **{chart_instruction}**
+5. Format: `Thinking: ...` then *either* `CALL_FUNCTION: ...` *or* `ANSWER: ...` *or* (`ANSWER: ...` followed by `CALL_FUNCTION: display_chart(...)`).
 
 **Your Response:**
 Thinking:
 """
+
 # --- Static Prompt Content Helpers ---
 
 def get_briefing_prompt():
-    # No changes needed here
     return """
 You are MEX Assistant, an AI partner designed specifically for GrabFood merchants in Southeast Asia.
 Your primary goal is to provide proactive, actionable insights and personalized guidance to help
-merchants make better business decisions and streamline operations. Remember to give natural flow in the cat and use colloquial if possible
+merchants make better business decisions and streamline operations. Remember to give natural flow in the chat and use colloquial if possible
 """
 
 def get_merchant_context_prompt(merchant_id):
@@ -452,7 +532,8 @@ def get_available_data_schemas_prompt(loader_module=loader, max_examples=2):
     return ("\n".join(prompt_parts) 
             + "\nNote that in loader.get_transaction_data_df(), each order can includes several products, so the order_value is the sum price of all of the products in that order"
             + "\nNote that the currency is in USD"
-            + "\nNote that all date would be in utc time, so when you make code, please use utc")
+            + "\nNote that in loader.get_inventory_df(), this data indicate the change log of the stock. So the current stock quantity is the one that has the latest date updated")
+    
 
 
 # BARU
@@ -630,20 +711,40 @@ def execute_tool_call(merchant_id, call_function_str):
         # --- End run_code ---
 
         elif func_name == "get_daily_report":
-             # --- Logic remains the same ---
             print(f"Executing get_daily_report for merchant {merchant_id}")
             report_date_str = None
-            date_match = re.search(r"""report_date\s*=\s*(['"])(.*?)\1""", params_str, re.IGNORECASE)
-            if date_match: report_date_str = date_match.group(2)
-            report_dt = date.today() - timedelta(days=1)
+            # Use simpler regex to find the date string if present
+            date_match = re.search(r"report_date\s*=\s*['\"](\d{4}-\d{2}-\d{2})['\"]", params_str, re.IGNORECASE)
+            if date_match:
+                report_date_str = date_match.group(1)
+
+            report_dt_to_pass = None # Initialize
+
             if report_date_str:
                 try:
-                    parsed_dt = pd.to_datetime(report_date_str).date()
-                    if parsed_dt <= date.today(): report_dt = parsed_dt
-                    else: print(f"Warning: Report date '{report_date_str}' is in the future. Defaulting to yesterday.")
-                except ValueError: print(f"Warning: Invalid date format '{report_date_str}'. Using yesterday.")
-            print(f"Using report date: {report_dt.strftime('%Y-%m-%d')}")
-            report_data = generate_daily_report(merchant_id, report_dt)
+                    # Parse the string directly into a datetime object
+                    parsed_dt = datetime.strptime(report_date_str, '%Y-%m-%d')
+                    # Make it timezone-aware UTC (start of the day)
+                    report_dt_to_pass = parsed_dt.replace(tzinfo=timezone.utc)
+                    # Optional: Check if date is in the future, though generate_daily_report might handle this better
+                    if report_dt_to_pass.date() > date.today():
+                         print(f"Warning: Report date '{report_date_str}' is in the future. Using today's start UTC.")
+                         report_dt_to_pass = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
+
+                except ValueError:
+                    print(f"Warning: Invalid date format '{report_date_str}' provided to get_daily_report. Defaulting...")
+                    # Fallback to start of today UTC if format is wrong
+                    report_dt_to_pass = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
+            else:
+                # Default: Use the beginning of today UTC if no date specified
+                # generate_daily_report will find the *actual* latest based on this starting point
+                report_dt_to_pass = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
+                print(f"No report date specified. Using default: {report_dt_to_pass.strftime('%Y-%m-%d %H:%M:%S %Z')}")
+
+
+            print(f"Calling generate_daily_report with requested date (UTC): {report_dt_to_pass.strftime('%Y-%m-%d')}")
+            # Pass the datetime object
+            report_data = generate_daily_report(merchant_id, report_dt_to_pass)
             return json.dumps(report_data, indent=2, default=str)
 
         elif func_name == "check_for_anomalies":

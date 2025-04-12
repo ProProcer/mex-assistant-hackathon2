@@ -1,8 +1,11 @@
 import pandas as pd
 from backend import config
-from datetime import datetime
+
+from datetime import datetime, date
+import traceback
 import os # Import os for path checks and directory creation
 import logging # Use logging for better messages
+
 
 # Global variables to store loaded DataFrames
 _merchant_df = None
