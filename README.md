@@ -89,7 +89,6 @@ The application utilizes several CSV files for data storage, typically located i
 5.  *Data Files:*
     * Ensure the necessary CSV data files (merchant.csv, items.csv, transaction_data.csv, inventory.csv, transaction_items.csv, notifications.csv etc.) are present in the mock_data/ directory. The paths are configured in backend/config.py[cite: 1].
     * You can download the required data files from this Google Drive link: [Hackathon Data](https://drive.google.com/drive/folders/1k2sXTX0gsV-fgIrVzgk8KNUIgWtvELiZ?usp=sharing)
-    * Alternatively, you might need to run the data generation script if mock data isn't pre-populated: python mock_data/generate_data.py [cite: 1]
 6.  *Run Backend:*
     * Navigate to the backend/ directory if you aren't already there.
     * Run the Flask application: python app.py [cite: 1]
