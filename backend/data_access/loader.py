@@ -3,8 +3,8 @@ from backend import config
 
 from datetime import datetime, date
 import traceback
-import os # Import os for path checks and directory creation
-import logging # Use logging for better messages
+import os 
+import logging
 
 
 # Global variables to store loaded DataFrames
@@ -12,8 +12,8 @@ _merchant_df = None
 _items_df = None
 _transaction_data_df = None
 _inventory_df = None
-_transaction_items_df = None  # <-- Add this
-_notifications_df = None # <-- NEW global variable
+_transaction_items_df = None 
+_notifications_df = None 
 
 
 def load_all_data():
@@ -149,13 +149,11 @@ def save_notification_rule(new_rule_dict):
         return False
 
     try:
-        # --- Option 1: Append directly to CSV (Simpler for single adds) ---
-        # Ensure the directory exists
         os.makedirs(os.path.dirname(config.NOTIFICATIONS_CSV), exist_ok=True)
         # Create a DataFrame from the new rule
         new_rule_df = pd.DataFrame([new_rule_dict])
-        # Check if file exists to determine if header should be written
         file_exists = os.path.exists(config.NOTIFICATIONS_CSV)
+
         # Append to CSV
         new_rule_df.to_csv(config.NOTIFICATIONS_CSV, mode='a', header=not file_exists, index=False)
 
@@ -166,31 +164,21 @@ def save_notification_rule(new_rule_dict):
         else:
              # If not loaded yet, load it now so it includes the new rule next time it's accessed
              logging.info("In-memory notifications DataFrame was None, reloading all data.")
-             load_all_data() # Reload all might be inefficient, could just load notifications
+             load_all_data() 
 
         logging.info(f"Appended notification rule ID {new_rule_dict.get('id')} to {config.NOTIFICATIONS_CSV}")
         return True
 
-        # --- Option 2: Load, Append DF, Save DF (Safer but slower for single adds) ---
-        # current_df = get_notifications_df() # Load current data (ensures loaded)
-        # new_rule_df = pd.DataFrame([new_rule_dict])
-        # updated_df = pd.concat([current_df, new_rule_df], ignore_index=True)
-        # os.makedirs(os.path.dirname(config.NOTIFICATIONS_CSV), exist_ok=True)
-        # updated_df.to_csv(config.NOTIFICATIONS_CSV, index=False)
-        # _notifications_df = updated_df # Update in-memory version
-        # logging.info(f"Saved updated notifications DataFrame ({len(updated_df)} rules) to {config.NOTIFICATIONS_CSV}")
-        # return True
 
     except Exception as e:
         logging.error(f"Error saving notification rule to CSV: {e}", exc_info=True)
         return False
 
-# --- TODO: Add functions for updating/deleting rules in the CSV ---
-# These would typically involve loading the DF, modifying it, and saving the whole thing back
+
 def update_notification_rule_in_csv(rule_id, merchant_id, update_data):
     """Loads CSV, updates a rule, saves CSV."""
     # Load
-    df = get_notifications_df() # Use accessor to ensure it's loaded
+    df = get_notifications_df() # 
     # Find index
     idx = df[(df['id'] == rule_id) & (df['merchant_id'] == merchant_id)].index
     if idx.empty:
@@ -287,35 +275,14 @@ def update_inventory(updates):
     except Exception as e:
         print(f"Error updating inventory: {e}")
         return False
-
-
-if __name__ == "__main__":
-    # Example usage if you want to test the loader directly
-    try:
-        load_all_data()
-        print("\nMerchant Data:")
-        print(get_merchant_df().head())
-        print("\nItems Data:")
-        print(get_items_df().head())
-        print("\nTransaction Data:")
-        print(get_transaction_data_df().head())
-        print("\nInventory Data:")
-        print(get_inventory_df().head())
-
-        # Example filtering of transaction data
-        merchant_transactions = get_transaction_data_df(merchant_id='1a3f7')
-        print("\nTransactions for Merchant 1a3f7:")
-        print(merchant_transactions.head())
-
-    except FileNotFoundError:
-        print("\nPlease ensure your CSV files are in the correct location.")
-    except Exception as e:
-        print(f"\nAn error occurred during the example usage: {e}")
-
+    
 
 def get_order_items_df():
     """Returns a copy of the transaction items DataFrame."""
     if _transaction_items_df is None:
         load_all_data()
-    # Add filtering logic here if needed later, like for get_transaction_data_df
     return _transaction_items_df.copy()
+
+
+
+
