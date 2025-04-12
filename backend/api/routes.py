@@ -217,7 +217,7 @@ def update_stock_route():
 
 
                  # --- Get Date (using consistent format) ---
-                 date_updated_str = datetime.now().strftime('%Y-%m-%d') # Use YYYY-MM-DD format for consistency
+                 date_updated_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S') # Use YYYY-MM-DD format for consistency
 
 
                  # --- Call inventory_manager to APPEND the new log entry ---
