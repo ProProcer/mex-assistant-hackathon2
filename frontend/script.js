@@ -94,7 +94,7 @@ function renderChart(chartPayload, containerElement) {
         return;
     }
 
-    if (chart_type !== 'bar') {
+    if (chart_type !== 'bar' && chart_type !== 'line') {
         console.error("[renderChart] Unsupported chart type received:", chart_type);
         containerElement.textContent = `[System: Received chart data but type '${chart_type}' is not supported yet.]`;
         containerElement.classList.remove('thinking');
@@ -165,7 +165,7 @@ function renderChart(chartPayload, containerElement) {
     // --- END DEBUG LOGGING ---
 
     const chartConfig = {
-        type: 'bar',
+        type: chart_type,
         data: finalChartData, // Use the potentially modified data structure
         options: {
             responsive: true,
