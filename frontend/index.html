@@ -34,27 +34,32 @@
             <button id="check-anomalies-btn" class="control-button">
                 <span class="button-icon">⚠️</span> Check Issues
             </button>
-            <button id="update-stock-btn" class="control-button">
-                <span class="button-icon">📦</span> Update Stock
-            </button>
+            
+            <div id="stock-dropdown-container" class="dropdown-container">
+                <button id="stock-dropdown-trigger" class="control-button dropdown-trigger">
+                    <span class="button-icon">📦</span> Update Stock <span class="dropdown-arrow">▾</span>
+                </button>
+                <div id="stock-dropdown-menu" class="dropdown-menu">
+                    <a class="update-stock-button" href="update_stock.html">
+                    <button id="update-stock-option" class="dropdown-option">
+                            <span class="button-icon">📝</span> Update Stocks List
+                    </button>
+                    </a>
+                    <a href="notify_stock.html">
+                        <button id="notify-stock-option" class="dropdown-option">
+                            <span class="button-icon">🔔</span> Notify Low Stocks
+                        </button>
+                    </a>
+                    
+                </div>
+            </div>
+        
         </section>
-
         <section id="chat-container" class="chat-card">
             <h2>Assistant Chat 💬</h2>
             <div id="chat-messages">
                 <!-- Messages will be added here by script.js -->
             </div>
-
-            <!-- Report Display Area -->
-            <div id="report-display" class="report-area">
-                <button id="close-report-btn" title="Close Report">×</button>
-                <h3>Daily Report Area</h3>
-                <canvas id="pareto-chart" width="400" height="200"></canvas>
-                <!-- Other report elements can go here -->
-            </div>
-            <!-- END: Report Display Area -->
-
-
             <!-- Chat Input Area -->
             <div id="chat-input-area">
                 <input type="text" id="user-input" placeholder="Type your message...">
@@ -68,7 +73,10 @@
 
         </section>
     </main>
-
+        <!-- Stock Alert Popup/Toast Container -->
+    <div id="stock-alert-container">
+        <!-- Popups will be added here by JavaScript -->
+    </div>
     <!-- Include Chart.js library -->
     <script src="lib/chart.umd.min.js"></script>
     <script src="lib/marked.min.js" defer></script>

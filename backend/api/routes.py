@@ -4,9 +4,11 @@ from flask import Blueprint, jsonify, request, session # Added session
 # --- Standard library imports ---
 import traceback
 from datetime import datetime
-
+from backend.data_access import loader
 # --- Third-party imports ---
 import pandas as pd
+import logging
+import numpy as np
 
 # --- Local application imports ---
 from backend.reporting import daily_report_generator
@@ -15,6 +17,7 @@ from backend.data_access import loader # Import necessary functions/modules
 from backend.insight_engine import recommendation_engine
 from backend.insight_engine import query_processor
 from backend import config # Import config
+from mock_data import inventory_manager
 
 # --- Import Inventory Manager (Adjust path as needed) ---
 # Assuming mock_data is adjacent or configured in PYTHONPATH
@@ -129,147 +132,139 @@ def get_merchant_inventory():
 @api_bp.route('/merchant/stock_update', methods=['POST'])
 def update_stock_route():
     """
-    Endpoint to record new stock levels by appending entries to the inventory log CSV.
-    Handles both bulk updates and adding single new items.
+    Endpoint to record new stock levels by appending entries to the inventory log CSV,
+    checks for notifications, and includes triggered alerts in the response.
     """
-    merchant_id = MOCK_MERCHANT_ID # Use the mock ID
+    merchant_id = MOCK_MERCHANT_ID # TODO: Get from session/auth
     try:
+        if not request.is_json: return jsonify({"error": "Request must be JSON"}), 400
         data = request.get_json()
-        # Expected: [{"stock_name": "...", "new_stock": ..., "units": "(optional)"}]
-        updates = data.get('updates')
+        updates = data.get('updates') # Expecting: [{"stock_name": "...", "new_stock": ..., "units": "(optional)"}]
 
         if not updates or not isinstance(updates, list):
-            return jsonify({"error": "Invalid or missing 'updates' list in request body"}), 400
+            return jsonify({"error": "Invalid or missing 'updates' list"}), 400
 
-        print(f"Received stock update request for merchant {merchant_id} with {len(updates)} items.")
+        logging.info(f"Stock update request for {merchant_id}, {len(updates)} items.")
 
         update_results = {"success": [], "failed": []}
+        triggered_product_names = [] # <-- List to collect product names triggering alerts
         all_succeeded = True
 
-        # --- Pre-fetch current units for efficiency (only if needed) ---
+        # --- Pre-fetch current units (Keep existing logic) ---
         current_units = {}
-        # Determine if any item in the payload is missing units information
         needs_unit_lookup = any(item.get('units') is None or item.get('units') == '' for item in updates)
-
         if needs_unit_lookup:
-            print("Units lookup needed for at least one item.")
+            # ... (keep the logic to fetch and populate current_units) ...
+            logging.info("Units lookup needed.")
             try:
-                latest_inventory = loader.get_inventory_df() # Read the current log
+                latest_inventory = loader.get_inventory_df()
                 if latest_inventory is not None and not latest_inventory.empty:
                     merchant_latest = latest_inventory[latest_inventory['merchant_id'] == merchant_id].copy()
                     if not merchant_latest.empty:
-                         # Ensure date conversion before sorting/dropping duplicates
                          merchant_latest['date_updated'] = pd.to_datetime(merchant_latest['date_updated'], errors='coerce')
                          merchant_latest.dropna(subset=['date_updated'], inplace=True)
-                         if not merchant_latest.empty: # Check again after dropna
+                         if not merchant_latest.empty:
                              merchant_latest = merchant_latest.sort_values(by='date_updated', ascending=False)
-                             # Get latest unit for each stock name
                              latest_units_df = merchant_latest.drop_duplicates(subset=['stock_name'], keep='first')
-                             current_units = pd.Series(latest_units_df.units.values, index=latest_units_df.stock_name).to_dict()
-                             print(f"Fetched current units for lookup: {current_units}")
-
+                             # Use fillna('') here to handle potential NaNs read from CSV before creating dict
+                             current_units = pd.Series(latest_units_df.units.values, index=latest_units_df.stock_name).fillna('').to_dict()
+                             logging.info(f"Fetched units for lookup: {len(current_units)} items")
             except Exception as e:
-                 print(f"Warning: Could not pre-fetch current units for lookup. Will use defaults if needed. Error: {e}")
-                 # Proceed without pre-fetched units, will use default '' if lookup fails or is not needed
+                 logging.warning(f"Could not pre-fetch units: {e}", exc_info=True)
         else:
-            print("No units lookup needed; all items provided units or lookup is not required.")
+            logging.info("No units lookup needed.")
 
 
         # --- Process each update item ---
         for item_update in updates:
             stock_name = item_update.get('stock_name')
             new_stock_str = item_update.get('new_stock')
-            # <<< --- MODIFICATION START --- >>>
-            # Get units specifically from this item's payload
-            units_from_payload = item_update.get('units') # Might be None or empty string
-            # <<< --- MODIFICATION END --- >>>
+            units_from_payload = item_update.get('units')
 
-            # --- Validation ---
+            # --- Validation (Keep existing) ---
             if not stock_name or new_stock_str is None:
-                print(f"Skipping invalid update item (missing stock_name or new_stock): {item_update}")
                 update_results["failed"].append({ "item": item_update, "reason": "Missing stock_name or new_stock" })
                 all_succeeded = False
                 continue
 
             try:
-                 # Convert new_stock to integer, handle potential errors
                  new_stock_int = int(new_stock_str)
-                 if new_stock_int < 0:
-                      raise ValueError("Stock cannot be negative")
+                 if new_stock_int < 0: raise ValueError("Stock cannot be negative")
 
-                 # <<< --- MODIFICATION START --- >>>
-                 # --- Determine Units ---
-                 # PRIORITY: Use units from payload if provided and not empty.
-                 # Otherwise, lookup from existing data (if lookup was performed).
-                 # Finally, default to empty string.
+                 # --- Determine Units (Keep existing) ---
                  final_units = ''
-                 if units_from_payload: # Check if it's not None and not empty string
-                     final_units = units_from_payload
-                     print(f"Using units from payload for '{stock_name}': '{final_units}'")
-                 else:
-                     # Only attempt lookup if lookup was needed and successful
-                     if needs_unit_lookup and current_units:
-                         final_units = current_units.get(stock_name, '') # Fallback to default '' if name not in lookup dict
-                     else:
-                         final_units = '' # Default to empty string if no lookup or lookup failed
-                     print(f"Using looked-up/default units for '{stock_name}': '{final_units}'")
-                 # <<< --- MODIFICATION END --- >>>
+                 if units_from_payload: final_units = units_from_payload
+                 elif needs_unit_lookup and current_units: final_units = current_units.get(stock_name, '')
+                 # ...
 
+                 date_updated_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
 
-                 # --- Get Date (using consistent format) ---
-                 date_updated_str = datetime.now().strftime('%Y-%m-%d %H:%M:%S') # Use YYYY-MM-DD format for consistency
-
-
-                 # --- Call inventory_manager to APPEND the new log entry ---
+                 # --- Call inventory_manager to APPEND log entry ---
+                 # Ensure using the correct INVENTORY_FILEPATH from config or manager
+                 log_filepath = config.INVENTORY_CSV # Use path from config ideally
                  success = inventory_manager.add_stock_log_entry(
                      merchant_id=merchant_id,
-                     stock_name=str(stock_name), # Ensure stock_name is string
+                     stock_name=str(stock_name),
                      new_stock_level=new_stock_int,
-                     units=str(final_units), # <<< MODIFICATION: Use the determined final_units >>>
+                     units=str(final_units),
                      date_updated_str=date_updated_str,
-                     filepath=inventory_manager.INVENTORY_FILEPATH # Use path from manager
+                     filepath=log_filepath # Pass the correct path
                  )
 
                  if success:
-                      print(f"Successfully logged new stock entry for {stock_name}")
-                      update_results["success"].append(stock_name)
+                      logging.info(f"Successfully logged entry for {stock_name}")
+                      update_results["success"].append({"name": stock_name, "new_level": new_stock_int}) # Include level for check
+
+                      # --- *** CHECK NOTIFICATIONS for THIS successful item *** ---
+                      alert_product_name = inventory_manager.check_stock_notifications(
+                          merchant_id, stock_name, new_stock_int
+                      )
+                      if alert_product_name and alert_product_name not in triggered_product_names:
+                           triggered_product_names.append(alert_product_name)
+                      # ---------------------------------------------------------
                  else:
-                      # The manager function prints errors, but log failure here too
-                      print(f"Failed to log new stock entry for {stock_name}")
-                      update_results["failed"].append({ "item": item_update, "reason": "inventory_manager failed to append log entry (check manager logs)" })
+                      logging.warning(f"Failed to log entry for {stock_name}")
+                      update_results["failed"].append({ "item": item_update, "reason": "inventory_manager failed to append log" })
                       all_succeeded = False
 
             except ValueError as ve:
-                 # Handle invalid integer conversion or negative stock
-                 print(f"Skipping update for '{stock_name}': Invalid stock value '{new_stock_str}'. Error: {ve}")
+                 # ... (handle failed item validation) ...
                  update_results["failed"].append({ "item": item_update, "reason": f"Invalid stock value: {ve}" })
                  all_succeeded = False
             except Exception as item_err:
-                 # Catch unexpected errors during a single item update
-                 print(f"Error processing update for {stock_name}: {item_err}")
-                 traceback.print_exc()
+                 # ... (handle failed item unexpected) ...
+                 logging.error(f"Error processing update for {stock_name}: {item_err}", exc_info=True)
                  update_results["failed"].append({ "item": item_update, "reason": f"Unexpected error: {item_err}" })
                  all_succeeded = False
 
-
         # --- Determine Overall Response ---
-        if all_succeeded:
-             print("All stock updates logged successfully.")
-             return jsonify({"status": "success", "message": f"Successfully processed {len(update_results['success'])} updates.", "details": update_results})
-        elif not update_results["success"]: # No items succeeded
-             print("All stock updates failed.")
-             # Check if failure was due to validation or backend issue
-             is_validation_failure = any('Invalid stock value' in f.get('reason','') or 'Missing' in f.get('reason','') for f in update_results.get('failed',[]))
-             status_code = 400 if is_validation_failure else 500
-             return jsonify({"error": "Failed to process any stock updates", "details": update_results}), status_code
-        else: # Partial success
-             print("Some stock updates failed.")
-             return jsonify({"status": "partial_success", "message": f"Processed {len(update_results['success'])} updates, {len(update_results['failed'])} failed.", "details": update_results}), 207
+        response_data = {
+            "details": update_results,
+             # ** INCLUDE THE ALERT LIST **
+            "low_stock_alerts": triggered_product_names
+        }
+        status_code = 200 # Default OK
 
+        if all_succeeded:
+             logging.info("All stock updates logged successfully. Notifications checked.")
+             response_data["status"] = "success"
+             response_data["message"] = f"Processed {len(updates)} updates."
+        elif not update_results["success"]:
+             logging.error("All stock updates failed.")
+             response_data["error"] = "Failed to process any stock updates"
+             is_validation = any('Invalid' in f.get('reason','') or 'Missing' in f.get('reason','') for f in update_results.get('failed',[]))
+             status_code = 400 if is_validation else 500
+        else: # Partial success
+             logging.warning("Some stock updates failed.")
+             response_data["status"] = "partial_success"
+             response_data["message"] = f"Processed {len(update_results['success'])}, Failed: {len(update_results['failed'])}."
+             status_code = 207 # Multi-Status
+
+        logging.info(f"Sending stock update response. Alerts: {triggered_product_names}")
+        return jsonify(response_data), status_code
 
     except Exception as e:
-        print(f"Critical Error in /merchant/stock_update endpoint: {e}")
-        traceback.print_exc()
+        logging.critical(f"Critical Error in /merchant/stock_update endpoint: {e}", exc_info=True)
         return jsonify({"error": "Internal server error during stock update process"}), 500
 
 
@@ -356,6 +351,159 @@ def handle_ask():
         traceback.print_exc()
         return jsonify({"answer": "Sorry, I encountered an error trying to answer that question."}), 500
 
+@api_bp.route('/merchant/notifications', methods=['GET'])
+def get_notification_rules():
+    merchant_id = MOCK_MERCHANT_ID # TODO: Get from session/auth
+    logging.info(f"GET /api/merchant/notifications request received for merchant {merchant_id}")
+    try:
+        rules_df = loader.get_notifications_df()
+        if rules_df.empty:
+            return jsonify([])
+
+        merchant_rules_df = rules_df[rules_df['merchant_id'] == merchant_id].copy()
+
+        # --- *** FIX: Handle NaN before converting to dictionary *** ---
+        # Replace pandas NaN with None (which becomes JSON null)
+        # Use numpy's NaN for reliable comparison across OS/versions
+        merchant_rules_df = merchant_rules_df.replace({np.nan: None})
+
+        # Alternatively, replace NaN specifically in certain columns:
+        # if 'units' in merchant_rules_df.columns:
+        #     merchant_rules_df['units'] = merchant_rules_df['units'].fillna('') # Replace NaN in units with empty string
+        # if 'threshold' in merchant_rules_df.columns:
+        #     # Replacing NaN in numeric column with None is usually best for JSON
+        #     merchant_rules_df['threshold'] = merchant_rules_df['threshold'].astype(object).where(pd.notnull(merchant_rules_df['threshold']), None)
+
+
+        rules_list = merchant_rules_df.to_dict('records')
+        # -------------------------------------------------------------
+
+        rules_list.sort(key=lambda x: x.get('id', 0))
+
+        logging.info(f"Returning {len(rules_list)} rules for merchant {merchant_id}.")
+        # Add debug print if needed
+        # logging.debug(f"Cleaned rules list for JSON: {rules_list}")
+        return jsonify(rules_list)
+    except Exception as e:
+        logging.error(f"Error processing GET /merchant/notifications for {merchant_id}: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error retrieving notification rules"}), 500
+
+
+@api_bp.route('/merchant/notifications', methods=['POST'])
+def create_notification_rule():
+    merchant_id = MOCK_MERCHANT_ID # TODO: Get from session/auth
+    logging.info(f"POST /api/merchant/notifications request received for merchant {merchant_id}")
+
+    if not request.is_json: return jsonify({"error": "Request must be JSON"}), 400
+    data = request.get_json()
+    logging.info(f"Received data: {data}")
+
+    # --- Validation (Keep same validation logic) ---
+    # ... (validation for productName, threshold, enabled) ...
+    required_fields = ['productName', 'threshold', 'enabled']
+    if not all(field in data for field in required_fields):
+        missing = [f for f in required_fields if f not in data]
+        return jsonify({"error": f"Missing required fields: {', '.join(missing)}"}), 400
+    product_name = data.get('productName')
+    threshold = data.get('threshold')
+    enabled = data.get('enabled')
+    units = data.get('units', '')
+    if not isinstance(product_name, str) or not product_name.strip():
+        return jsonify({"error": "productName must be non-empty"}), 400
+    try:
+        threshold_num = float(threshold)
+        if threshold_num < 0: raise ValueError()
+    except: return jsonify({"error": "threshold must be non-negative number"}), 400
+    if not isinstance(enabled, bool):
+        return jsonify({"error": "enabled must be boolean"}), 400
+    # --- End Validation ---
+
+    try:
+        # --- Load existing rules to determine next ID and check duplicates ---
+        # Use the accessor function
+        rules_df = loader.get_notifications_df()
+
+        # Check for duplicates for THIS merchant
+        merchant_rules = rules_df[rules_df['merchant_id'] == merchant_id]
+        is_duplicate = merchant_rules['productName'].str.lower() == product_name.strip().lower()
+        if is_duplicate.any():
+            return jsonify({"error": f"A rule for '{product_name}' already exists."}), 409
+
+        # Determine next ID
+        if rules_df.empty or 'id' not in rules_df.columns or rules_df['id'].isnull().all():
+             new_rule_id = 1
+        else:
+             new_rule_id = int(rules_df['id'].max()) + 1 # Ensure int result
+
+        # --- Create new rule data ---
+        new_rule = {
+            "id": new_rule_id,
+            "merchant_id": merchant_id,
+            "productName": product_name.strip(),
+            "threshold": threshold_num,
+            "enabled": enabled,
+            "units": units
+        }
+
+        # --- Call the loader function to save the rule ---
+        if loader.save_notification_rule(new_rule):
+            logging.info(f"Rule ID {new_rule_id} saved via loader for merchant {merchant_id}.")
+            # Return the rule data (as it was passed to save)
+            return jsonify({"message": "Rule created successfully!", "rule": new_rule}), 201
+        else:
+            logging.error("Loader failed to save notification rule.")
+            return jsonify({"error": "Failed to save notification rule."}), 500
+
+    except Exception as e:
+        logging.error(f"Error processing POST /merchant/notifications for {merchant_id}: {e}", exc_info=True)
+        return jsonify({"error": "Internal server error creating notification rule"}), 500
+
+
+@api_bp.route('/merchant/notifications/<int:rule_id>', methods=['PUT', 'PATCH'])
+def update_notification_rule(rule_id):
+    merchant_id = MOCK_MERCHANT_ID # TODO: Use real auth
+    logging.info(f"PUT/PATCH /api/merchant/notifications/{rule_id} for merchant {merchant_id}")
+    if not request.is_json: return jsonify({"error": "Request must be JSON"}), 400
+    data = request.get_json()
+
+    # Call the loader function to handle update and saving
+    success, result_data = loader.update_notification_rule_in_csv(rule_id, merchant_id, data)
+
+    if success:
+        if result_data: # Check if result_data is not None (means update happened or no change needed)
+             logging.info(f"Rule {rule_id} update processed successfully via loader.")
+             return jsonify({"message": "Rule updated successfully!", "rule": result_data}), 200
+        else: # Should ideally not happen if success is True based on loader logic
+             logging.warning("Loader reported success but no result data for update.")
+             return jsonify({"message": "Update processed, but no data returned."}), 200
+    elif result_data is None and not success: # Check if it was a "not found" error
+         return jsonify({"error": "Rule not found or does not belong to merchant"}), 404
+    else: # Other failure (e.g., save error)
+        logging.error(f"Loader failed to update rule {rule_id}.")
+        return jsonify({"error": "Failed to update notification rule."}), 500
+
+
+@api_bp.route('/merchant/notifications/<int:rule_id>', methods=['DELETE'])
+def delete_notification_rule(rule_id):
+    merchant_id = MOCK_MERCHANT_ID # TODO: Use real auth
+    logging.info(f"DELETE /api/merchant/notifications/{rule_id} for merchant {merchant_id}")
+
+    # Call the loader function to handle deletion and saving
+    success = loader.delete_notification_rule_from_csv(rule_id, merchant_id)
+
+    if success:
+        logging.info(f"Rule {rule_id} deleted successfully via loader.")
+        return jsonify({"message": "Rule deleted successfully"}), 200
+    else:
+        # Loader function logs specifics, check if it was not found vs save error
+        # For simplicity here, return 404, but could differentiate
+        # We might need the loader delete function to return more info (e.g., 'not_found', 'save_error')
+        logging.warning(f"Loader failed to delete rule {rule_id} (may not exist or save failed).")
+        return jsonify({"error": "Rule not found or failed to delete."}), 404 # Or 500 if save failed
+
+
+
+
 @api_bp.route('/merchant/stock_delete', methods=['DELETE'])
 def delete_stock_route():
     """
@@ -391,3 +539,4 @@ def delete_stock_route():
         print(f"Critical Error in /merchant/stock_delete endpoint for {stock_name}: {e}")
         traceback.print_exc()
         return jsonify({"error": "Internal server error during stock deletion process"}), 500
+

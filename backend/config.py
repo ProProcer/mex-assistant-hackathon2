@@ -24,6 +24,7 @@ TRANSACTION_DATA_CSV = MOCK_DATA_DIR / "transaction_data.csv"
 INVENTORY_CSV = MOCK_DATA_DIR / "inventory.csv"
 HOLIDAYS_CSV = MOCK_DATA_DIR / "holidays.csv"
 KEYWORDS_CSV = MOCK_DATA_DIR / "keywords.csv"
+NOTIFICATIONS_CSV = MOCK_DATA_DIR / "notifications.csv"
 # Define the path relative to MOCK_DATA_DIR
 TRANSACTION_ITEMS_CSV = MOCK_DATA_DIR / "transaction_items.csv" # <-- CORRECTED LINE
 
@@ -46,6 +47,9 @@ ITEM_SALES_TREND_DAYS = 30
 
 # --- Word of Encouragement (for reports) ---
 ENCOURAGEMENT_MESSAGE = "You're doing great! Keep analyzing those metrics."
+
+
+
 
 # --- Example Usage (for testing config) ---
 if __name__ == "__main__":
