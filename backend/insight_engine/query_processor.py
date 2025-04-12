@@ -456,7 +456,7 @@ def get_available_data_schemas_prompt(loader_module=loader, max_examples=2):
     return ("\n".join(prompt_parts) 
             + "\nNote that in loader.get_transaction_data_df(), each order can includes several products, so the order_value is the sum price of all of the products in that order"
             + "\nNote that the currency is in USD"
-            + "\nNote that in loader.get_inventory_df(), this data indicate the change log of the stock. So the current stock quantity is the one that has the latest date updated"))
+            + "\nNote that in loader.get_inventory_df(), this data indicate the change log of the stock. So the current stock quantity is the one that has the latest date updated")
     
 
 
