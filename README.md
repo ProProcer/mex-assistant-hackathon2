@@ -96,6 +96,3 @@ The application utilizes several CSV files for data storage, typically located i
     * Open your web browser and go to http://127.0.0.1:5000/ (or the address provided by Flask).
     * The application interface should load, allowing interaction with the different features.
 
-## API Contract
-
-For details on the available backend API endpoints, please refer to the docs/api_contract.md file[cite: 1].
