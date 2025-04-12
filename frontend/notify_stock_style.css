@@ -1,0 +1,415 @@
+/* --- CSS Variables from Reference --- */
+:root {
+    --font-family-base: sans-serif;
+    --background-light: #f8f9fa;
+    --card-background: #ffffff;
+    --shadow-light: 0 1px 3px rgba(0,0,0,0.1);
+    --border-radius-medium: 6px;
+    --border-color: #dee2e6;
+    --grab-green: #00b14f;
+    --grab-green-dark: #008a3e;
+    --light-green-bg: #d4edda;
+    --light-red-bg: #f8d7da; /* Added for error background */
+    --light-grey-bg: #e2e3e5; /* Added for loading background */
+    /* Added from original if needed */
+    --text-primary: #1C1C1C;
+    --text-secondary: #555;
+}
+
+/* --- Global Styles from Reference --- */
+body {
+    font-family: var(--font-family-base);
+    background-color: var(--background-light);
+    padding: 0;
+    margin: 0;
+    color: var(--text-primary); /* Added default text color */
+    line-height: 1.5; /* Added default line height */
+}
+
+h1, h2, h3 {
+    color: var(--text-primary);
+    margin-bottom: 0.75em; /* Consistent heading margin */
+}
+h2 { font-size: 1.5em; margin-top: 1.5em; }
+h3 { font-size: 1.25em; font-weight: 600; margin-top: 1em; }
+
+/* --- Layout from Reference --- */
+.content-wrapper {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+}
+
+/* --- Header from Reference --- */
+.app-header {
+    display: flex;
+    background-color: var(--grab-green);
+    color: white;
+    padding: 15px 20px;
+    align-items: center; /* Vertical alignment */
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.app-header img {
+    height: 30px;
+    margin-right: 15px; /* Space between logo and title */
+}
+.app-header h1 {
+    margin: 0; /* Remove default margin */
+    font-size: 1.4em;
+    font-weight: 500;
+    color: white;
+}
+
+/* --- Back Link from Reference --- */
+.back-link-container {
+    margin-bottom: 15px;
+}
+.back-link {
+    display: inline-block; /* Allows margin */
+    color: var(--grab-green);
+    text-decoration: none;
+    font-weight: 500;
+ }
+ .back-link:hover {
+    text-decoration: underline;
+ }
+
+/* --- Table Styles (Adapted from .inventory-table) --- */
+.notification-section {
+    /* Remove card styling, apply directly to table/form below if needed */
+    margin-bottom: 25px;
+}
+
+.notification-section h3 {
+    /* Reference h3 styling applied globally */
+    /* Add border bottom if desired */
+     padding-bottom: 10px;
+     border-bottom: 1px solid var(--border-color);
+}
+
+.inventory-table { /* Applied to notification table */
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: var(--card-background);
+    box-shadow: var(--shadow-light);
+    border-radius: var(--border-radius-medium);
+    overflow: hidden; /* To respect border-radius */
+    border: 1px solid var(--border-color); /* Add outer border consistent with reference */
+}
+.inventory-table th,
+.inventory-table td {
+    border: 1px solid var(--border-color);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+    font-size: 0.95em; /* Ensure consistent font size */
+}
+.inventory-table th {
+    background-color: #f2f2f2; /* Header background from reference */
+    font-weight: 600;
+    color: var(--text-secondary); /* Use text-secondary if defined */
+}
+.inventory-table tr:nth-child(even) {
+    background-color: #f9f9f9; /* Even row background */
+}
+/* --- Ensure the general styling remains --- */
+.inventory-table input[type="number"] {
+    width: 80px; /* Or your desired width */
+    padding: 5px 8px; /* Adjust padding if spinners affect layout */
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: right;
+    background-color: #fff;
+    font-size: 1em;
+    /* REMOVED appearance overrides */
+}
+
+/* Keep the focus style */
+.inventory-table input[type="number"]:focus {
+    outline: none;
+    border-color: var(--grab-green);
+    box-shadow: 0 0 0 2px rgba(0, 177, 79, 0.2);
+}
+.inventory-table input[type="number"]:read-only { /* Style for read-only inputs in table */
+    background-color: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+
+.inventory-table input[type="number"]:focus {
+    outline: none;
+    border-color: var(--grab-green);
+    box-shadow: 0 0 0 2px rgba(0, 177, 79, 0.2);
+}
+.units { /* Units class from reference */
+    font-size: 0.9em;
+    color: #6c757d; /* Grey color from reference */
+    margin-left: 4px;
+}
+.inventory-table .action-btn { /* Simpler action button */
+    background: none;
+    border: none;
+    padding: 5px;
+    cursor: pointer;
+    font-size: 1.2em; /* Adjust icon size */
+    color: var(--text-secondary);
+    transition: color 0.2s ease;
+}
+.inventory-table .action-btn:hover {
+    color: #dc3545; /* Red hover for delete */
+}
+
+
+/* --- Form Styles (Adapted from .add-item-section / .add-item-form) --- */
+.add-item-section { /* Applied to create notification section */
+     background-color: var(--card-background);
+     padding: 15px 20px;
+     margin-top: 25px;
+     border-radius: var(--border-radius-medium);
+     box-shadow: var(--shadow-light);
+     border: 1px solid var(--border-color);
+ }
+
+.add-item-form { /* Applied to create notification form */
+     display: flex;
+     flex-wrap: wrap; /* Allow wrapping */
+     gap: 15px; /* Space between form groups */
+     align-items: flex-end; /* Align bottoms */
+     margin-top: 15px; /* Space below heading */
+ }
+
+ .add-item-form .form-group {
+     flex: 1; /* Allow flexible sizing */
+     min-width: 150px; /* Minimum width before wrapping */
+     margin-bottom: 5px; /* Consistent spacing */
+ }
+
+ .add-item-form label {
+     display: block;
+     margin-bottom: 5px;
+     font-size: 0.9em;
+     font-weight: 500;
+     color: var(--text-secondary); /* Consistent label color */
+ }
+
+ /* Style select like text inputs */
+ .add-item-form input[type="number"],
+ .add-item-form select {
+     width: 100%; /* Make inputs fill their group */
+     padding: 8px 10px;
+     border: 1px solid var(--border-color);
+     border-radius: 4px;
+     font-size: 1em;
+     box-sizing: border-box; /* Include padding in width */
+ }
+  .add-item-form input[type="number"] {
+     -moz-appearance: textfield;
+ }
+ .add-item-form input[type="number"]::-webkit-outer-spin-button,
+ .add-item-form input[type="number"]::-webkit-inner-spin-button {
+   -webkit-appearance: none;
+   margin: 0;
+ }
+
+ /* Focus styles for form inputs */
+ .add-item-form input[type="number"]:focus,
+ .add-item-form select:focus {
+     outline: none;
+     border-color: var(--grab-green);
+     box-shadow: 0 0 0 2px rgba(0, 177, 79, 0.2);
+ }
+
+ /* Style for the Add Rule Button */
+ .add-item-form #add-notification-rule-btn {
+    padding: 10px 20px;
+    background-color: var(--grab-green);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-medium);
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    /* Adjust alignment if needed */
+    height: 38px; /* Match input height roughly */
+    margin-bottom: 5px; /* Align with bottom margin of form-group */
+    flex-shrink: 0; /* Prevent shrinking */
+ }
+ .add-item-form #add-notification-rule-btn:hover:not(:disabled) {
+    background-color: var(--grab-green-dark);
+ }
+ .add-item-form #add-notification-rule-btn:disabled {
+     background-color: #cccccc;
+     cursor: not-allowed;
+ }
+
+/* --- Toggle Switch CSS (Keep from original) --- */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+  vertical-align: middle;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  -webkit-transition: .4s;
+  transition: .4s;
+}
+input:checked + .slider {
+  background-color: var(--grab-green);
+}
+input:focus + .slider {
+  box-shadow: 0 0 1px var(--grab-green);
+}
+input:checked + .slider:before {
+  -webkit-transform: translateX(26px);
+  -ms-transform: translateX(26px);
+  transform: translateX(26px);
+}
+.slider.round {
+  border-radius: 24px;
+}
+.slider.round:before {
+  border-radius: 50%;
+}
+
+.modal-overlay {
+    position: fixed; /* Stay in place */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    background-color: rgba(0, 0, 0, 0.5); /* Black background with opacity */
+    display: flex; /* Use flexbox for centering */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    z-index: 1000; /* Sit on top */
+    opacity: 0; /* Start hidden */
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0s linear 0.3s; /* Fade transition */
+}
+
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    transition: opacity 0.3s ease;
+}
+
+.modal-content {
+    background-color: var(--card-background);
+    padding: 25px 30px;
+    border-radius: var(--border-radius-medium);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    width: 90%;
+    max-width: 400px; /* Max width */
+    text-align: center;
+    transform: scale(0.9); /* Start slightly smaller */
+    transition: transform 0.3s ease;
+}
+
+.modal-overlay.show .modal-content {
+    transform: scale(1); /* Scale up when shown */
+}
+
+
+.modal-content h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+    color: var(--text-primary);
+}
+
+.modal-content p {
+    margin-bottom: 25px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.modal-actions {
+    display: flex;
+    justify-content: space-around; /* Or space-between, center */
+    gap: 15px;
+}
+
+.modal-button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: var(--border-radius-medium);
+    font-size: 0.95em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
+    min-width: 100px; /* Ensure buttons have some width */
+}
+
+.modal-button.confirm {
+    background-color: #dc3545; /* Red for delete confirmation */
+    color: white;
+    border: 1px solid #dc3545;
+}
+.modal-button.confirm:hover {
+    background-color: #c82333; /* Darker red */
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.modal-button.cancel {
+    background-color: #f8f9fa; /* Light grey */
+    color: var(--text-secondary);
+    border: 1px solid var(--border-color);
+}
+.modal-button.cancel:hover {
+    background-color: #e2e6ea;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* --- Optional: Add Status Message Styles from Reference if needed later --- */
+#status-message {
+    /* ... styles from reference ... */
+}
+/* ... .success, .error, .loading styles ... */
+
+
+/* --- Responsiveness (Simplified) --- */
+@media (max-width: 768px) {
+    .add-item-form {
+        /* Allow form items to stack */
+    }
+    .add-item-form .form-group {
+        min-width: 100px; /* Adjust minimum width */
+    }
+    .inventory-table th,
+    .inventory-table td {
+        padding: 8px 10px; /* Slightly reduce padding */
+        font-size: 0.9em; /* Slightly smaller font */
+    }
+     .app-header {
+        padding: 10px 15px;
+     }
+     .app-header h1 {
+        font-size: 1.2em;
+     }
+}
