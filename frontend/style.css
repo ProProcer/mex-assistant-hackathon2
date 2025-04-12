@@ -310,10 +310,7 @@ input[type="text"] {
 
 /* Specific Button Overrides (Optional - can use green for primary) */
 #get-report-btn {
-   /* Optional: Make primary action green */
-   /* background-color: var(--grab-green); */
-   /* color: white; */
-   /* border-color: var(--grab-green); */
+    background-color: inherit;
 }
 /* #get-report-btn:hover { background-color: var(--grab-green-dark); } */
 
@@ -330,7 +327,7 @@ input[type="text"] {
 }
 
 #chat-messages {
-    height: 350px;
+    height: 350 px;
     overflow-y: auto;
     padding: 10px 5px; /* Reduce horizontal padding slightly */
     margin-bottom: 15px;
@@ -364,10 +361,53 @@ input[type="text"] {
     background-color: #e5e5ea; /* Light grey for bot */
     color: var(--text-primary);
     align-self: flex-start;
-    margin-right: auto;
-    border-radius: 18px 18px 18px 4px; /* Slightly different rounding */
+    margin-right: auto; /* Aligns left */
+    border-radius: 18px 18px 18px 4px;
+    /* Standard width constraint for text */
+    max-width: 75%;
+    padding: 10px 15px; /* Keep default padding */
+    word-wrap: break-word;
+    line-height: 1.4;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    font-size: 0.95em;
+    /* Add transition for smooth size change (optional) */
+    transition: max-width 0.3s ease;
 }
 
+.bot-message.has-chart {
+    max-width: 95%; /* Make the bubble almost full width */
+    /* Remove default padding, let the inner container handle it */
+    padding: 5px; /* Minimal padding for the bubble itself */
+    background-color: transparent; /* Make bubble background transparent */
+    box-shadow: none; /* Remove bubble shadow, apply to inner container */
+    border-radius: var(--border-radius-large); /* Consistent radius */
+}
+
+.chart-container {
+    width: 100%; /* Fill the parent (.bot-message.has-chart) */
+    /* height: 600px; */ /* Remove or change this fixed height */
+
+    /* SET YOUR DESIRED CHART HEIGHT HERE: */
+    height: 350px; /* Example: Make the chart container 400px tall */
+    /* Or use max-height if you want it potentially shorter based on content/library */
+    /* max-height: 450px; */
+
+    background-color: #ffffff; /* White background */
+    padding: 20px;           /* Padding inside the chart container */
+    border: 1px solid var(--border-color); /* Use theme border */
+    border-radius: var(--border-radius-medium); /* Rounded corners */
+    box-shadow: var(--shadow-light); /* Use theme shadow */
+    margin: 0; /* Remove default margins */
+    position: relative; /* Needed for Chart.js responsiveness */
+    box-sizing: border-box; /* Include padding/border */
+}
+
+.chart-container canvas {
+    max-width: 100%;
+    /* max-height: 100%; */ /* Let height be controlled by container OR Chart.js options */
+     height: 100% !important; /* Force canvas to fill the container height */
+    display: block; /* Prevent extra space below canvas */
+}
 /* Thinking animation message */
 .bot-message.thinking {
     font-style: italic;
@@ -495,3 +535,8 @@ input[type="text"] {
         height: 40px;
      }
 }
+
+
+
+
+

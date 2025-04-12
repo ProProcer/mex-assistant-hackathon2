@@ -61,15 +61,27 @@ def create_app():
 
             user_message = data['message']
 
-            # Process the message using your logic
-            bot_reply = process_merchant_question('1d4f2',user_message)
+            merchant_id = '1d4f2'
+            print(f"Processing chat for merchant '{merchant_id}' message: '{user_message}'") # Add log
 
-            # Return the bot's reply as JSON
-            return jsonify({"reply": bot_reply})
+            # Process the message using your logic
+            response_json_string = process_merchant_question(merchant_id, user_message)
+            print(f"Response string from processor: {response_json_string[:300]}...") # Add log
+
+            # --- CORRECTED RETURN ---
+            # Return the JSON string directly with the correct MIME type
+            return app.response_class(
+                response=response_json_string,
+                status=200,
+                mimetype='application/json'
+            )
+            # --- END CORRECTION ---
 
         except Exception as e:
-            print(f"Error processing chat request: {e}") # Log the error server-side
-            return jsonify({"error": "An internal server error occurred"}), 500
+            # Log the full error traceback for debugging
+            print(f"Error processing chat request: {e}\n{traceback.format_exc()}")
+            # Use jsonify for sending *error* JSON objects
+            return jsonify({"error": "An internal server error occurred processing your request."}), 500
 
     return app
 

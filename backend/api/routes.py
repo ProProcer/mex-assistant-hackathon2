@@ -350,10 +350,6 @@ def handle_ask():
         print(f"Error processing question '{question}' for {merchant_id}: {e}")
         traceback.print_exc()
         return jsonify({"answer": "Sorry, I encountered an error trying to answer that question."}), 500
-    
-
-@api_bp.route('/merchant/notifications', methods=['GET'])
-
 
 @api_bp.route('/merchant/notifications', methods=['GET'])
 def get_notification_rules():
@@ -505,4 +501,42 @@ def delete_notification_rule(rule_id):
         logging.warning(f"Loader failed to delete rule {rule_id} (may not exist or save failed).")
         return jsonify({"error": "Rule not found or failed to delete."}), 404 # Or 500 if save failed
 
+
+
+
+@api_bp.route('/merchant/stock_delete', methods=['DELETE'])
+def delete_stock_route():
+    """
+    Endpoint to delete all log entries for a specific stock item for the merchant.
+    """
+    merchant_id = MOCK_MERCHANT_ID # Use the mock ID or get from auth
+
+    # Get stock_name from request body (JSON)
+    data = request.get_json()
+    stock_name = data.get('stock_name')
+
+    if not stock_name:
+        return jsonify({"error": "Missing 'stock_name' in request body"}), 400
+
+    print(f"Received request to delete stock '{stock_name}' for merchant {merchant_id}")
+
+    try:
+        success = inventory_manager.delete_stock_log_entry(
+            merchant_id=merchant_id,
+            stock_name=stock_name,
+            filepath=inventory_manager.INVENTORY_FILEPATH # Use path from manager
+        )
+
+        if success:
+             print(f"Successfully processed deletion request for {stock_name}")
+             return jsonify({"status": "success", "message": f"Stock item '{stock_name}' deleted successfully."})
+        else:
+             # Assume inventory_manager logged the specific error
+             print(f"Failed to process deletion request for {stock_name}")
+             return jsonify({"error": f"Failed to delete stock item '{stock_name}'. Check server logs."}), 500
+
+    except Exception as e:
+        print(f"Critical Error in /merchant/stock_delete endpoint for {stock_name}: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "Internal server error during stock deletion process"}), 500
 

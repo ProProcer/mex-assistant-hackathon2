@@ -39,47 +39,148 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Function to populate the table (No changes needed here)
-    function populateTable(inventoryData) {
-        // ... (keep existing populateTable logic) ...
-        if (!inventoryTableBody) return;
-        inventoryTableBody.innerHTML = '';
+    // Function to populate the table
+     function populateTable(inventoryData) {
+         if (!inventoryTableBody) return;
+         inventoryTableBody.innerHTML = '';
 
-        if (!inventoryData || inventoryData.length === 0) {
-            inventoryTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No inventory items found for this merchant.</td></tr>';
+         if (!inventoryData || inventoryData.length === 0) {
+             // *** CHANGE: Update colspan to 3 since Actions column is removed ***
+             inventoryTableBody.innerHTML = '<tr><td colspan="3" style="text-align: center;">No inventory items found for this merchant.</td></tr>';
+             return;
+         }
+         originalInventoryData = JSON.parse(JSON.stringify(inventoryData));
+
+         inventoryData.forEach(item => {
+             const row = document.createElement('tr');
+             row.setAttribute('data-stock-name', item.stock_name);
+
+             // Stock Name Cell (No change)
+             const nameCell = document.createElement('td');
+             nameCell.textContent = item.stock_name || 'N/A';
+             row.appendChild(nameCell);
+
+             // Current Quantity Cell (No change)
+             const currentQtyCell = document.createElement('td');
+             currentQtyCell.textContent = item.current_stock;
+             if (item.units) {
+                 const unitsSpan = document.createElement('span');
+                 unitsSpan.classList.add('units');
+                 unitsSpan.textContent = item.units;
+                 currentQtyCell.appendChild(document.createTextNode(' '));
+                 currentQtyCell.appendChild(unitsSpan);
+             }
+             currentQtyCell.classList.add('current-quantity');
+             row.appendChild(currentQtyCell);
+
+             // *** START CHANGES for New Quantity Cell ***
+             const newQtyCell = document.createElement('td');
+             newQtyCell.classList.add('new-quantity-cell'); // Add a class for easier CSS targeting
+
+             // Create Quantity Input (No change)
+             const input = document.createElement('input');
+             input.type = 'number';
+             input.min = '0';
+             input.value = item.current_stock;
+             input.classList.add('new-quantity-input');
+             input.setAttribute('aria-label', `New quantity for ${item.stock_name || 'item'}`);
+             newQtyCell.appendChild(input); // Add input first
+
+             // --- Create and Add Action Elements directly into this cell ---
+             const actionContainer = document.createElement('div');
+             actionContainer.classList.add('action-container');
+
+             const dotsBtn = document.createElement('button');
+             dotsBtn.classList.add('action-dots-btn');
+             dotsBtn.innerHTML = '&#8942;'; // Vertical ellipsis
+             dotsBtn.title = 'Actions';
+
+             const dropdown = document.createElement('div');
+             dropdown.classList.add('action-dropdown');
+
+             const deleteBtn = document.createElement('button');
+             deleteBtn.classList.add('delete-stock-btn');
+             deleteBtn.textContent = 'Delete';
+
+             // Event listener for dots button
+             dotsBtn.addEventListener('click', (event) => {
+                 event.stopPropagation();
+                 document.querySelectorAll('.action-dropdown').forEach(d => {
+                     if (d !== dropdown) d.style.display = 'none';
+                 });
+                 dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+             });
+
+             // Event listener for delete button
+             deleteBtn.addEventListener('click', () => {
+                 const stockNameToDelete = item.stock_name;
+                 deleteStockItem(stockNameToDelete);
+                 dropdown.style.display = 'none';
+             });
+
+             // Assemble and append actions
+             dropdown.appendChild(deleteBtn);
+             actionContainer.appendChild(dotsBtn);
+             actionContainer.appendChild(dropdown);
+             newQtyCell.appendChild(actionContainer); // Append actions container *after* input
+
+             row.appendChild(newQtyCell); // Add the combined cell to the row
+
+             inventoryTableBody.appendChild(row); // Add the completed row
+         });
+     }
+
+
+    // --- Add this new function outside populateTable ---
+    async function deleteStockItem(stockName) {
+        if (!stockName) {
+            console.error("No stock name provided for deletion.");
+            showStatus("Could not determine item to delete.", "error");
             return;
         }
-        originalInventoryData = JSON.parse(JSON.stringify(inventoryData));
 
-        inventoryData.forEach(item => {
-            const row = document.createElement('tr');
-            row.setAttribute('data-stock-name', item.stock_name);
-            const nameCell = document.createElement('td');
-            nameCell.textContent = item.stock_name || 'N/A';
-            row.appendChild(nameCell);
-            const currentQtyCell = document.createElement('td');
-            currentQtyCell.textContent = item.current_stock;
-            if (item.units) {
-                const unitsSpan = document.createElement('span');
-                unitsSpan.classList.add('units');
-                unitsSpan.textContent = item.units;
-                currentQtyCell.appendChild(document.createTextNode(' '));
-                currentQtyCell.appendChild(unitsSpan);
+        // Confirmation dialog (recommended)
+        if (!confirm(`Are you sure you want to permanently delete all entries for "${stockName}"? This cannot be undone.`)) {
+            return; // User cancelled
+        }
+
+        showStatus(`Deleting "${stockName}"...`, 'loading');
+
+        try {
+            const response = await fetch('/api/merchant/stock_delete', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ stock_name: stockName })
+            });
+
+            const result = await response.json().catch(() => ({})); // Attempt to parse JSON
+
+            if (!response.ok) {
+                throw new Error(result.error || `Server error deleting item: ${response.status}`);
             }
-            currentQtyCell.classList.add('current-quantity');
-            row.appendChild(currentQtyCell);
-            const newQtyCell = document.createElement('td');
-            const input = document.createElement('input');
-            input.type = 'number';
-            input.min = '0';
-            input.value = item.current_stock;
-            input.classList.add('new-quantity-input');
-            input.setAttribute('aria-label', `New quantity for ${item.stock_name || 'item'}`);
-            newQtyCell.appendChild(input);
-            row.appendChild(newQtyCell);
-            inventoryTableBody.appendChild(row);
-        });
+
+            console.log(`Deletion successful for ${stockName}:`, result);
+            showStatus(result.message || `Successfully deleted "${stockName}".`, 'success');
+
+            // Refresh the inventory table to reflect the deletion
+            await fetchInventory();
+
+        } catch (error) {
+            console.error(`Error deleting stock item "${stockName}":`, error);
+            showStatus(`Error deleting "${stockName}": ${error.message}`, 'error');
+        } finally {
+            // You might want to disable buttons during the process, re-enable here
+        }
     }
+
+    // --- Add a global click listener to close dropdowns ---
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.action-dropdown').forEach(d => {
+            d.style.display = 'none';
+        });
+    });
 
     // Function to fetch inventory data (No changes needed here)
     async function fetchInventory() {
