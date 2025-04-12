@@ -63,6 +63,7 @@ def process_merchant_question(merchant_id, question):
     chart_instruction = (
         "**Generating Charts:** To show a chart: 1. Use `run_code` to calculate data & print JSON. 2. Wait for result. "
         "3. In the *final* step, provide *both* your textual `ANSWER:` explaining the chart, *and* then immediately follow with `CALL_FUNCTION: display_chart(...)` using the JSON data from step 1."
+        " **Rule:** Keep charts simple. For bar charts, limit x-axis ticks (max ~20)."
     )
 
     for turn in range(MAX_TURNS):
@@ -450,7 +451,8 @@ def get_available_data_schemas_prompt(loader_module=loader, max_examples=2):
 
     return ("\n".join(prompt_parts) 
             + "\nNote that in loader.get_transaction_data_df(), each order can includes several products, so the order_value is the sum price of all of the products in that order"
-            + "\nNote that the currency is in USD")
+            + "\nNote that the currency is in USD"
+            + "\nNote that all date would be in utc time, so when you make code, please use utc")
 
 
 # BARU
@@ -514,11 +516,12 @@ def get_available_tools_prompt():
         "description": (
             "Use this tool ONLY to display a visual chart in the chat interface, **AFTER providing a textual explanation in the `ANSWER:` section.** "
              "**Process:** 1. Use `run_code` to calculate data & print JSON. 2. Get the JSON result. 3. In your FINAL response, provide `ANSWER: [Your text explanation]` THEN immediately follow with `CALL_FUNCTION: display_chart(chart_data='[JSON string from run_code]', chart_type='bar', ...)`."
+            " **Plotting Rule of Thumb:** Maintain simplicity. For bar charts, avoid too many x-axis ticks (e.g., keep it below 20)."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-                "chart_type": { "type": "string", "description": "Currently supported: 'bar'.", "enum": ["bar"] },
+                "chart_type": { "type": "string", "description": "Currently supported: 'bar', 'line'.", "enum": ["bar", "line"] },
                 "chart_data": { "type": "string", "description": "A JSON string containing the Chart.js data structure (e.g., '{\"labels\": [...], \"data\": [...]}'). This MUST be the exact output from a previous `run_code` call."},
                 "title": { "type": "string", "description": "Optional title." },
                 "x_label": { "type": "string", "description": "Optional X-axis label." },
@@ -707,11 +710,14 @@ def execute_tool_call(merchant_id, call_function_str):
                  print("Warning: Could not find 'chart_data=' pattern.")
                  chart_data_str = None
 
+
+            supported_chart = ["line", "bar"]
+
             # Validation (same as before)
             if not chart_type or chart_data_str is None:
                 err_msg = f"display_chart: Missing required 'chart_type' or could not extract 'chart_data'. Params: '{params_str[:100]}...{params_str[-100:]}'"
                 return f"--- Execution Failed ---\n--- Error Type ---\nParameterError\n--- Error Message ---\n{err_msg}"
-            if chart_type != 'bar':
+            if chart_type not in supported_chart:
                  err_msg = f"display_chart: Unsupported chart_type '{chart_type}'. Only 'bar' is supported."
                  return f"--- Execution Failed ---\n--- Error Type ---\nParameterError\n--- Error Message ---\n{err_msg}"
 
