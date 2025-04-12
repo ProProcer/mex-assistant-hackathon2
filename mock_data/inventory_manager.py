@@ -372,7 +372,62 @@ def add_stock_log_entry(merchant_id: str,
         traceback.print_exc() # Log the full traceback for debugging help
         return False
 
+def delete_stock_log_entry(merchant_id: str, stock_name: str, filepath: str = INVENTORY_FILEPATH) -> bool:
+    """
+    Deletes all log entries for a specific stock item belonging to a specific merchant
+    from the inventory CSV file.
 
+    Args:
+        merchant_id (str): The ID of the merchant.
+        stock_name (str): The name of the stock item to delete.
+        filepath (str): The path to the inventory CSV file.
+
+    Returns:
+        bool: True if deletion was successful (or item didn't exist), False otherwise.
+    """
+    log.info(f"Attempting to delete stock '{stock_name}' for merchant '{merchant_id}' from {filepath}")
+
+    try:
+        # Read the existing inventory log
+        # Note: _read_inventory might need adjustment if it doesn't handle the log format
+        # For simplicity, let's assume a direct read here. Adapt if using a helper.
+        if not os.path.exists(filepath):
+            log.warning(f"Inventory file {filepath} not found. Nothing to delete.")
+            return True # Item doesn't exist, consider it successful deletion
+
+        inventory_df = pd.read_csv(filepath)
+
+        if inventory_df.empty:
+            log.info(f"Inventory file {filepath} is empty. Nothing to delete.")
+            return True
+
+        # --- Filter out the rows to delete ---
+        initial_rows = len(inventory_df)
+        # Condition to keep rows: EITHER merchant ID doesn't match OR stock name doesn't match
+        inventory_df_filtered = inventory_df[
+            ~((inventory_df['merchant_id'] == merchant_id) & (inventory_df['stock_name'] == stock_name))
+        ]
+        rows_deleted = initial_rows - len(inventory_df_filtered)
+
+        if rows_deleted == 0:
+            log.warning(f"Stock item '{stock_name}' for merchant '{merchant_id}' not found in {filepath}. No changes made.")
+            # Return True because the desired state (item not present) is achieved
+            return True
+
+        # --- Save the filtered DataFrame back to CSV, overwriting the file ---
+        # Use the existing _save_inventory logic if possible, or adapt below:
+        inventory_df_filtered.to_csv(filepath, index=False)
+        log.info(f"Successfully deleted {rows_deleted} entries for stock '{stock_name}' (Merchant: {merchant_id}) from {filepath}")
+        return True
+
+    except FileNotFoundError:
+         log.error(f"File not found error during deletion attempt for {filepath}.")
+         return False # Should be caught by os.path.exists, but good practice
+    except Exception as e:
+        log.error(f"An unexpected error occurred during deletion in {filepath}: {e}")
+        import traceback
+        traceback.print_exc()
+        return False
 
 # --- Example Usage ---
 if __name__ == "__main__":
