@@ -1,0 +1,197 @@
+/* [Existing Styles remain the same] */
+:root {
+    --font-family-base: sans-serif;
+    --background-light: #f8f9fa;
+    --card-background: #ffffff;
+    --shadow-light: 0 1px 3px rgba(0,0,0,0.1);
+    --border-radius-medium: 6px;
+    --border-color: #dee2e6;
+    --grab-green: #00b14f;
+    --grab-green-dark: #008a3e;
+    --light-green-bg: #d4edda;
+    --light-red-bg: #f8d7da; /* Added for error background */
+    --light-grey-bg: #e2e3e5; /* Added for loading background */
+}
+body {
+    font-family: var(--font-family-base);
+    background-color: var(--background-light);
+    padding: 0;
+    margin: 0;
+}
+.content-wrapper {
+    max-width: 900px;
+    margin: 20px auto;
+    padding: 20px;
+}
+.inventory-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    background-color: var(--card-background);
+    box-shadow: var(--shadow-light);
+    border-radius: var(--border-radius-medium);
+    overflow: hidden;
+}
+.inventory-table th,
+.inventory-table td {
+    border: 1px solid var(--border-color);
+    padding: 10px 12px;
+    text-align: left;
+    vertical-align: middle;
+}
+.inventory-table th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+}
+.inventory-table tr:nth-child(even) {
+    background-color: #f9f9f9;
+}
+.inventory-table input[type="number"] {
+    width: 80px;
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    text-align: right;
+}
+.inventory-table input[type="number"]:focus {
+    outline: none;
+    border-color: var(--grab-green);
+    box-shadow: 0 0 0 2px rgba(0, 177, 79, 0.2);
+}
+.save-button-container {
+    text-align: right;
+    margin-top: 20px;
+}
+#save-stock-btn, #add-new-item-btn { /* Style both buttons */
+    padding: 10px 20px;
+    background-color: var(--grab-green);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius-medium);
+    font-size: 1em;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    margin-left: 10px; /* Add space between buttons if needed */
+}
+ #save-stock-btn:hover:not(:disabled),
+ #add-new-item-btn:hover:not(:disabled) {
+    background-color: var(--grab-green-dark);
+}
+ #save-stock-btn:disabled,
+ #add-new-item-btn:disabled {
+     background-color: #cccccc;
+     cursor: not-allowed;
+}
+#status-message {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 4px;
+    text-align: center;
+    display: none;
+    font-weight: 500;
+}
+#status-message.success {
+    background-color: var(--light-green-bg);
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+#status-message.error {
+    background-color: var(--light-red-bg);
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+#status-message.loading {
+    background-color: var(--light-grey-bg);
+    color: #383d41;
+    border: 1px solid #d6d8db;
+}
+.app-header {
+    display: flex;
+    background-color: var(--grab-green);
+    color: white;
+    padding: 15px 20px;
+    align-items: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.app-header img {
+    height: 30px;
+    margin-right: 15px;
+}
+.app-header h1 {
+    margin: 0;
+    font-size: 1.4em;
+    font-weight: 500;
+    color: white;
+}
+ .back-link {
+    display: inline-block;
+    margin-bottom: 15px;
+    color: var(--grab-green);
+    text-decoration: none;
+    font-weight: 500;
+ }
+ .back-link:hover {
+    text-decoration: underline;
+ }
+ .units {
+    font-size: 0.9em;
+    color: #6c757d;
+    margin-left: 4px;
+ }
+ /* --- NEW STYLES for Add Item Section --- */
+ .add-item-section {
+     background-color: var(--card-background);
+     padding: 15px 20px;
+     margin-top: 25px;
+     border-radius: var(--border-radius-medium);
+     box-shadow: var(--shadow-light);
+     border: 1px solid var(--border-color);
+ }
+ .add-item-section h3 {
+     margin-top: 0;
+     margin-bottom: 15px;
+     font-weight: 600;
+ }
+ .add-item-form {
+     display: flex;
+     flex-wrap: wrap; /* Allow wrapping on smaller screens */
+     gap: 15px; /* Space between form elements */
+     align-items: flex-end; /* Align bottoms of inputs/button */
+ }
+ .add-item-form label {
+     display: block;
+     margin-bottom: 5px;
+     font-size: 0.9em;
+     font-weight: 500;
+ }
+ .add-item-form input[type="text"],
+ .add-item-form input[type="number"] {
+     padding: 8px 10px;
+     border: 1px solid var(--border-color);
+     border-radius: 4px;
+     font-size: 1em;
+ }
+ .add-item-form input[type="text"]:focus,
+ .add-item-form input[type="number"]:focus {
+     outline: none;
+     border-color: var(--grab-green);
+     box-shadow: 0 0 0 2px rgba(0, 177, 79, 0.2);
+ }
+ .add-item-form .form-group {
+     flex: 1; /* Allow flexible sizing */
+     min-width: 120px; /* Minimum width before wrapping */
+ }
+ .add-item-form .form-group.name {
+     flex-grow: 2; /* Allow name field to be wider */
+ }
+ #add-new-item-btn {
+     margin-left: 0; /* Remove margin added earlier if needed */
+     align-self: flex-end; /* Ensure button aligns with bottom */
+     /* Optional: Add margin-top if needed when wrapped */
+     margin-top: 10px; /* Adjust as necessary */
+ }
+ /* Input field width adjustments */
+ #new-stock-name-input { width: 95%; } /* Example width */
+ #new-stock-quantity-input { width: 80px; text-align: right;}
+ #new-stock-units-input { width: 60px; }

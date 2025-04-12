@@ -7,6 +7,7 @@ import numpy as np # Ensure numpy is imported
 import logging # Using logging is generally better than print for libraries/modules
 import os
 import traceback
+from backend.data_access import loader
 
 # --- Constants ---
 SCRIPT_DIR = Path(__file__).resolve().parent
@@ -372,6 +373,70 @@ def add_stock_log_entry(merchant_id: str,
         traceback.print_exc() # Log the full traceback for debugging help
         return False
 
+
+def check_stock_notifications(merchant_id, stock_name, new_stock_level):
+    logging.info(f"CHECKING RULE >> For Merchant: {merchant_id}, Item: '{stock_name}', New Level: {new_stock_level}")
+    triggered_product_name = None
+    try:
+        logging.info("CHECKING RULE >> Attempting to load notification rules via loader.get_notifications_df()") # Log before call
+        rules_df = loader.get_notifications_df() # Call the loader function
+
+        # *** CRITICAL DEBUG STEP ***
+        if rules_df is None:
+            logging.error("CHECKING RULE >> loader.get_notifications_df() returned None!")
+            return None # Exit early if None
+        elif rules_df.empty:
+            logging.warning("CHECKING RULE >> loader.get_notifications_df() returned an EMPTY DataFrame.")
+            # Log columns to see if they are defined even if empty
+            logging.warning(f"CHECKING RULE >> Empty DataFrame columns: {rules_df.columns.tolist()}")
+            return None # Exit early if empty
+        else:
+             # Log info only if DF is not empty
+             logging.info(f"CHECKING RULE >> Successfully loaded rules DataFrame. Shape: {rules_df.shape}")
+             logging.info(f"CHECKING RULE >> Loaded rules DF Head:\n{rules_df.head().to_string()}")
+             logging.info(f"CHECKING RULE >> Loaded rules DF Dtypes:\n{rules_df.dtypes}")
+
+
+        # --- Filter for the specific merchant and product name ---
+        # (Add logging here too if needed, but first focus on loading)
+        item_rule_df = rules_df[
+            (rules_df['merchant_id'] == merchant_id) &
+            (rules_df['productName'].str.lower() == stock_name.lower())
+        ]
+        # ... rest of the function ...
+
+    except AttributeError as ae:
+         # This might happen if loader itself is not imported correctly
+         logging.error(f"CHECKING RULE >> AttributeError! Is 'loader' imported correctly? Error: {ae}", exc_info=True)
+         return None
+    except Exception as e:
+        logging.error(f"CHECKING RULE >> Error during notification check: {e}", exc_info=True)
+        return None # Return None on error
+
+    return triggered_product_name
+
+def add_stock_log_entry(merchant_id, stock_name, new_stock_level, units, date_updated_str, filepath=INVENTORY_FILEPATH):
+    """
+    Appends a new stock level entry to the inventory log CSV.
+    (Notification check is now handled by the calling route).
+    """
+    try:
+        new_entry = { # Match column names in inventory.csv
+            'merchant_id': [merchant_id],
+            'stock_name': [stock_name],
+            'stock_quantity': [new_stock_level],
+            'units': [units],
+            'date_updated': [date_updated_str]
+        }
+        new_entry_df = pd.DataFrame(new_entry)
+        os.makedirs(os.path.dirname(filepath), exist_ok=True)
+        file_exists = os.path.exists(filepath)
+        new_entry_df.to_csv(filepath, mode='a', header=not file_exists, index=False)
+        logging.info(f"Appended stock log entry to {filepath} for {stock_name}")
+        return True # Indicate logging success
+    except Exception as e:
+        logging.error(f"Failed to add stock log entry for {stock_name}: {e}", exc_info=True)
+        return False
 
 
 # --- Example Usage ---

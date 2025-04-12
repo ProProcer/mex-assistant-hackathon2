@@ -6,6 +6,11 @@ const updateStockBtn = document.getElementById('update-stock-btn');
 const chatMessages = document.getElementById('chat-messages');
 const reportDisplay = document.getElementById('report-display');
 const paretoChartCanvas = document.getElementById('pareto-chart');
+const stockDropdownContainer = document.getElementById('stock-dropdown-container');
+const stockDropdownTrigger = document.getElementById('stock-dropdown-trigger');
+const stockDropdownMenu = document.getElementById('stock-dropdown-menu');
+const updateStockOption = document.getElementById('update-stock-option');
+const notifyStockOption = document.getElementById('notify-stock-option');
 let paretoChart = null; // To keep track of the chart instance
 // Use relative URL if frontend and backend are served from the same origin,
 // otherwise use the full URL like 'http://127.0.0.1:5000/chat'
@@ -18,6 +23,7 @@ const closeReportBtn = document.getElementById('close-report-btn'); // Make sure
 
 // --- Loading Animation Frames ---
 const thinkingFrames = ['/', '-', '\\', '|']; // Frames for the animation
+
 
 
 // --- Functions ---
@@ -220,7 +226,6 @@ if (userInput) {
 
 
 
-
 // --- Initial Load ---
 document.addEventListener('DOMContentLoaded', () => {
     fetchMerchantInfo();
@@ -232,3 +237,130 @@ document.addEventListener('DOMContentLoaded', () => {
         userInput.focus();
     }
 });
+
+async function handleNotifyLowStocks() {
+    console.log("Notify Low Stocks option clicked");
+    stockDropdownMenu.classList.remove('show'); // Close dropdown immediately
+
+    const messageForBackend = "notify me about low stock items";
+    displayMessage(`Okay, I will ${messageForBackend}.`, 'bot'); // Inform user
+    await fetchBotReply(messageForBackend); // Send request to backend
+    // You might want to add specific UI feedback here if needed
+}
+
+if (stockDropdownTrigger && stockDropdownMenu) {
+    stockDropdownTrigger.addEventListener('click', (event) => {
+        event.stopPropagation(); // Prevent click from immediately closing menu via window listener
+        stockDropdownMenu.classList.toggle('show');
+    });
+
+    // Close dropdown if clicked outside
+    window.addEventListener('click', (event) => {
+        if (!stockDropdownContainer.contains(event.target)) {
+            stockDropdownMenu.classList.remove('show');
+        }
+    });
+}
+
+if (updateStockOption) {
+    updateStockOption.addEventListener('click', handleUpdateStockList);
+}
+
+if (notifyStockOption) {
+    notifyStockOption.addEventListener('click', handleNotifyLowStocks);
+}
+
+// --- Add these elements and functions to your stock update script ---
+
+// Reference to the container where popups will appear
+const stockAlertContainer = document.getElementById('stock-alert-container');
+
+// Function to display a stock alert popup
+function showStockAlertPopup(alertDetails) {
+    if (!stockAlertContainer || !alertDetails) return;
+
+    const popup = document.createElement('div');
+    popup.className = 'stock-alert-popup';
+
+    // Icon (you can use an actual icon library or emoji)
+    const iconSpan = document.createElement('span');
+    iconSpan.className = 'alert-icon';
+    iconSpan.textContent = '⚠️'; // Warning emoji
+    popup.appendChild(iconSpan);
+
+    // Message
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'alert-message';
+    messageDiv.innerHTML = `<strong>${alertDetails.productName} is low!</strong> Current: ${alertDetails.currentLevel} (Threshold: ${alertDetails.threshold})`;
+    popup.appendChild(messageDiv);
+
+    // Close Button
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'alert-close-btn';
+    closeBtn.innerHTML = '×'; // 'x' symbol
+    closeBtn.onclick = () => {
+        popup.classList.remove('show');
+        // Remove from DOM after animation
+        setTimeout(() => popup.remove(), 450); // Match transition duration + buffer
+    };
+    popup.appendChild(closeBtn);
+
+    // Add to container
+    stockAlertContainer.appendChild(popup);
+
+    // Trigger the show animation (needs slight delay after appending)
+    setTimeout(() => popup.classList.add('show'), 50);
+
+    // Auto-dismiss after some time (e.g., 7 seconds)
+    setTimeout(() => {
+        // Check if popup still exists before trying to remove
+        if (popup && popup.classList.contains('show')) {
+             closeBtn.onclick(); // Trigger the close logic
+        }
+    }, 7000); // 7 seconds
+    function showStockAlertPopup(productName) {
+        if (!stockAlertContainer || !productName) {
+            console.warn("Missing alert container or product name for popup.");
+            return;
+        }
+        console.log(`Showing alert popup for: ${productName}`); // Debug log
+    
+        const popup = document.createElement('div');
+        popup.className = 'stock-alert-popup'; // Use the CSS class
+    
+        // Icon
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'alert-icon';
+        iconSpan.textContent = '⚠️';
+        popup.appendChild(iconSpan);
+    
+        // Simplified Message
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'alert-message';
+        messageDiv.innerHTML = `<strong>${productName}</strong> stock is low!`;
+        popup.appendChild(messageDiv);
+    
+        // Close Button
+        const closeBtn = document.createElement('button');
+        closeBtn.className = 'alert-close-btn';
+        closeBtn.innerHTML = '×';
+        closeBtn.onclick = () => {
+            popup.classList.remove('show');
+            setTimeout(() => popup.remove(), 450); // Remove after fade out
+        };
+        popup.appendChild(closeBtn);
+    
+        // Add to container
+        stockAlertContainer.appendChild(popup);
+    
+        // Trigger show animation
+        setTimeout(() => popup.classList.add('show'), 50);
+    
+        // Auto-dismiss
+        setTimeout(() => {
+            if (popup && popup.classList.contains('show')) {
+                 closeBtn.onclick();
+            }
+        }, 7000);
+    }
+}

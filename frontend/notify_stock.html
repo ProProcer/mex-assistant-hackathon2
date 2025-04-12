@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEX Assistant - Stock Notifications</title>
+    <!-- Make sure CSS path is correct -->
+    <link rel="stylesheet" href="notify_stock_style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+</head>
+<body>
+
+    <header class="app-header">
+        <a href="#"><img src="images/GrabFood Logo White.png" alt="GrabFood Logo"></a>
+        <h1>MEX Assistant - Inventory</h1>
+    </header>
+
+
+    <div class="content-wrapper">
+
+        <div class="back-link-container">
+             <a href="index.html" class="back-link">
+                ← Back to Main Dashboard
+             </a>
+        </div>
+
+        <h2>Manage Low Stock Notifications</h2>
+
+        <!-- Section 1: Current Notifications -->
+        <section class="notification-section">
+            <h3>Current Notification Rules</h3>
+             <!-- Add ID to tbody for easier JS manipulation later -->
+            <table class="inventory-table notification-table">
+                <thead>
+                    <tr>
+                        <th>Product Name</th>
+                        <th>Notify Below Quantity</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="current-rules-tbody"> <!-- Added ID -->
+                    <!-- Example rows (can be removed once dynamic loading works) -->
+                    <tr>
+                        <td>Bread</td>
+                        <td><input type="number" value="10" min="0" step="1"> <span class="units">(loaf)</span></td>
+                        <td><label class="toggle-switch"><input type="checkbox" checked><span class="slider round"></span></label></td>
+                        <td><button class="action-btn delete-btn" title="Delete Rule">🗑️</button></td>
+                    </tr>
+                    <!-- ... other example rows ... -->
+                </tbody>
+            </table>
+            <p class="no-notifications-message" style="display: none; text-align: center; margin-top: 15px; color: #6c757d;">No active notification rules found.</p>
+             <!-- Optional: Add Status Message Div -->
+             <div id="status-message" style="display: none; margin-top: 15px;"></div>
+        </section>
+
+        <!-- Section 2: Create New Notification -->
+        <section class="add-item-section notification-section">
+            <h3>Create New Notification Rule</h3>
+            <form id="create-notification-form" class="add-item-form">
+                <div class="form-group">
+                    <label for="product-select">Product Name:</label>
+                    <!-- **** REMOVED HARDCODED OPTIONS **** -->
+                    <select id="product-select" name="product-name" required>
+                        <option value="" disabled selected>-- Select a Product --</option>
+                        <!-- Options will be populated by JavaScript -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="notify-quantity">Notify below quantity:</label>
+                    <input type="number" id="notify-quantity" name="notify-quantity" min="0" step="1" required placeholder="e.g., 5">
+                </div>
+
+                <div class="form-group">
+                    <label for="enable-notification">Enable Notification:</label>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="enable-notification" name="enabled" checked>
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <button type="submit" id="add-notification-rule-btn" class="add-rule-btn">
+                   Add Rule
+                </button>
+            </form>
+        </section>
+
+    </div> <!-- End Content Wrapper -->
+
+    <div id="confirmation-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <h4>Confirm Deletion</h4>
+            <p id="modal-message">Are you sure you want to delete this notification rule?</p>
+            <div class="modal-actions">
+                <button id="modal-confirm-btn" class="modal-button confirm">Delete</button>
+                <button id="modal-cancel-btn" class="modal-button cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+    <div id="stock-alert-container">
+        <!-- Popups will be added here by JavaScript -->
+    </div>
+
+    <!-- **** ADD SCRIPT TAG **** -->
+    <script src="notify_script.js"></script>
+</body>
+</html>
