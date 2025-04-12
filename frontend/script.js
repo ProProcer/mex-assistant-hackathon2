@@ -195,7 +195,12 @@ async function checkAnomalies() {
     merchantInfoDiv.style.border = "none"; // Reset border, assuming reply explains status
 }
 
-function updateStock() { /* ... keep as is ... */ }
+function updateStock() {
+    console.log("Update Stock button clicked - navigating to update_stock.html");
+    window.location.href = 'update_stock.html'; // <--- THIS LINE
+}
+
+
 function createParetoChart(itemsData) { /* ... keep as is ... */ }
 
 // --- Event Listeners ---
