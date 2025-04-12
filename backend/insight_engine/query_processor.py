@@ -53,13 +53,14 @@ def process_merchant_question(merchant_id, question):
     data_schemas = get_available_data_schemas_prompt()
     tool_descriptions = get_available_tools_prompt()
 
-    # --- Tool Bypass Instruction (for prompts) ---
+    # --- Tool Bypass Instruction (for prompts) --
     report_exception_instruction = (
         "**Special Case:** If you call `get_daily_report`, the system will "
         "return its raw output directly. Do *not* try to summarize or analyze "
         "the report data yourself in a subsequent 'ANSWER:' step; the raw data "
         "is the final output for that specific tool call."
     )
+    
     chart_instruction = (
         "**Generating Charts:** To show a chart: 1. Use `run_code` to calculate data & print JSON. 2. Wait for result. "
         "3. In the *final* step, provide *both* your textual `ANSWER:` explaining the chart, *and* then immediately follow with `CALL_FUNCTION: display_chart(...)` using the JSON data from step 1."
@@ -94,7 +95,6 @@ def process_merchant_question(merchant_id, question):
                 original_question=question,
                 previous_thinking=current_thinking,
                 provided_data=provided_data,
-                report_exception_instruction=report_exception_instruction,
                 chart_instruction = chart_instruction
             )
 
@@ -189,11 +189,12 @@ def process_merchant_question(merchant_id, question):
             tool_result_string = execute_tool_call(merchant_id, call_function_str)
             print(f"<-- Tool Execution Result (String): {tool_result_string[:500]}...")
 
-            if func_name == "get_daily_report": # Handle daily report bypass
-                 print(f"--> Special Handling: '{func_name}'. Returning result directly.")
-                 conversation_history.append({"role": "system", "tool_call": call_function_str, "tool_response": tool_result_string})
-                 return json.dumps({"answer": tool_result_string}) # Return raw report string as answer
-            elif "Execution Failed" in tool_result_string:
+            # if func_name == "get_daily_report": # Handle daily report bypass
+            #    print(f"--> Special Handling: '{func_name}'. Returning result directly.")
+            #     conversation_history.append({"role": "system", "tool_call": call_function_str, "tool_response": tool_result_string})
+            #     return json.dumps({"answer": tool_result_string}) # Return raw report string as answer
+            
+            if "Execution Failed" in tool_result_string:
                  # If tool failed, pass the error back to the AI to potentially fix
                  print("--> Tool execution failed. Passing error back to AI.")
                  provided_data = tool_result_string
@@ -239,11 +240,14 @@ def build_initial_prompt(briefing, core_principles, merchant_context, current_da
 **Instructions:**
 1. Analyze question: "{user_question}".
 2. Think step-by-step under `Thinking:`.
-3. Determine the **first** tool call needed (usually `run_code` for data). Output `CALL_FUNCTION: ...`.
+3. Determine the **first** tool call needed (e.g., `run_code`, `get_daily_report`). Output `CALL_FUNCTION: ...`.
 4. Follow **`run_code` Rules:** NO IMPORTS, NO PLOTTING, calculate data, print result (use JSON for chart data).
-5. **{report_exception_instruction}**
-6. **{chart_instruction}** # Add chart instruction
-7. Format: `Thinking: ...` then `CALL_FUNCTION: ...` (or `ANSWER:` if no tool needed).
+5. **{chart_instruction}** # Add chart instruction
+6. **Handling `get_daily_report` Results:** If you call `get_daily_report` and receive JSON data back in the next turn, your **only** task in that *subsequent* turn is to format the received JSON data into a user-friendly summary using **Markdown** in the `ANSWER:` section.
+    *   **IMPORTANT:** When formatting, act ONLY as a data presenter. **DO NOT** add any analysis, interpretation, or reasoning beyond what is explicitly stated in the JSON data provided by the tool. Stick strictly to the facts from the report.
+    *   Use Markdown (headings, bold, lists) for clarity. Do NOT output the raw JSON.
+7. Format: `Thinking: ...` then `CALL_FUNCTION: ...` (or `ANSWER:` if no tool needed, or for formatting the report as per instruction #6).
+
 **Merchant's Question:**
 {user_question}
 
@@ -252,7 +256,7 @@ Thinking:
 """
 
 # Updated to accept the report_exception_instruction
-def build_intermediate_prompt(briefing, core_principles, merchant_context, current_date, data_schemas, tool_descriptions, original_question, previous_thinking, provided_data, report_exception_instruction,chart_instruction):
+def build_intermediate_prompt(briefing, core_principles, merchant_context, current_date, data_schemas, tool_descriptions, original_question, previous_thinking, provided_data,chart_instruction):
     # Added stricter rules for run_code and error handling
     return f"""
 {briefing}
@@ -269,16 +273,16 @@ Continue answering: "{original_question}"
 *   **Data/Result Provided:** {provided_data[:1000]}...
 
 **Instructions:**
-1. Review `Provided Data`. Is the next step possible?
-2. Reason under `Thinking:`.
+1. Review `Provided Data`.
+2. Reason under `Thinking:`. What is the next logical step based *only* on the `Provided Data` and the `Original Question`?
 3. Determine **next** step:
+    *   **Is `Provided Data` the JSON from `get_daily_report`?** -> Your *only* action is to format this JSON data using **Markdown** in the `ANSWER:` section. **Strictly present the data; DO NOT analyze or interpret it** in this step. Stick to the facts from the JSON. Use Markdown (headings, bold, lists).
     *   Need more data/calculation? -> `CALL_FUNCTION: run_code(...)`. Follow `run_code` rules (NO IMPORTS/PLOTTING, print JSON for charts).
     *   Ready to display chart? -> Provide textual `ANSWER: ...` AND THEN `CALL_FUNCTION: display_chart(...)` using JSON data from previous `run_code`.
-    *   Ready for final text answer? -> `ANSWER: ...`.
+    *   Ready for final text answer (not related to report formatting)? -> `ANSWER: ...`.
     *   Handle errors from `Provided Data`: Explain correction in `Thinking:`, call corrected `run_code`. Give up after 1-2 tries.
-4. **{report_exception_instruction}**
-5. **{chart_instruction}** # Add chart instruction
-6. Format: `Thinking: ...` then *either* `CALL_FUNCTION: ...` *or* `ANSWER: ...` *or* (`ANSWER: ...` followed by `CALL_FUNCTION: display_chart(...)`).
+4. **{chart_instruction}** # Add chart instruction
+5. Format: `Thinking: ...` then *either* `CALL_FUNCTION: ...` *or* `ANSWER: ...` *or* (`ANSWER: ...` followed by `CALL_FUNCTION: display_chart(...)`).
 
 **Your Response:**
 Thinking:
@@ -450,7 +454,8 @@ def get_available_data_schemas_prompt(loader_module=loader, max_examples=2):
 
     return ("\n".join(prompt_parts) 
             + "\nNote that in loader.get_transaction_data_df(), each order can includes several products, so the order_value is the sum price of all of the products in that order"
-            + "\nNote that the currency is in USD")
+            + "\nNote that the currency is in USD"
+            + "\nNote that in loader.get_inventory_df(), this data indicate the change log of the stock. So the current stock quantity is the one that has the latest date updated")
 
 
 # BARU
@@ -640,6 +645,7 @@ def execute_tool_call(merchant_id, call_function_str):
                     else: print(f"Warning: Report date '{report_date_str}' is in the future. Defaulting to yesterday.")
                 except ValueError: print(f"Warning: Invalid date format '{report_date_str}'. Using yesterday.")
             print(f"Using report date: {report_dt.strftime('%Y-%m-%d')}")
+
             report_data = generate_daily_report(merchant_id, report_dt)
             return json.dumps(report_data, indent=2, default=str)
 

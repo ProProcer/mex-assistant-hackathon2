@@ -1,6 +1,8 @@
 import pandas as pd
 from backend import config
-from datetime import datetime
+from datetime import datetime, date
+import traceback
+
 
 # Global variables to store loaded DataFrames
 _merchant_df = None
